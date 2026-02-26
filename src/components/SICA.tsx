@@ -145,6 +145,108 @@ const statusConfig = {
   cancelled: { label: 'Dibatalkan', color: 'text-red-400 bg-red-900/20 border-red-500/30' },
 };
 
+// ============================================================
+// Payment Modal Component (Duitku)
+// ============================================================
+interface PaymentModalProps {
+  plan: { id: string; name: string; price: string; amount: number };
+  onClose: () => void;
+}
+
+const PaymentModal: React.FC<PaymentModalProps> = ({ plan, onClose }) => {
+  const [step, setStep] = useState<'form' | 'processing' | 'result'>('form');
+  const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState('');
+
+  const handlePay = async () => {
+    if (!form.name || !form.email) { setError('Nama & email wajib diisi!'); return; }
+    setError('');
+    setStep('processing');
+    try {
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: plan.id, customer_name: form.name, customer_email: form.email, customer_phone: form.phone, payment_method: 'VC' })
+      });
+      const data = await res.json() as Record<string, unknown>;
+      setResult(data);
+      setStep('result');
+    } catch {
+      setError('Gagal membuat order. Coba lagi.');
+      setStep('form');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md">
+        <div className="p-5 border-b border-slate-700 flex justify-between items-center">
+          <div>
+            <h3 className="font-bold text-white text-lg">💳 Berlangganan SICA</h3>
+            <p className="text-emerald-400 text-sm font-semibold">{plan.name} — {plan.price}/bulan</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">×</button>
+        </div>
+        <div className="p-5">
+          {step === 'form' && (
+            <div className="space-y-4">
+              <p className="text-slate-400 text-sm">Isi data untuk memulai berlangganan. Pembayaran aman via <span className="text-emerald-400 font-semibold">Duitku</span> (QRIS, VA, GoPay, OVO, dll).</p>
+              {error && <div className="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded-lg p-3">{error}</div>}
+              <input className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                placeholder="Nama Lengkap *" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
+              <input className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                placeholder="Email *" type="email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} />
+              <input className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                placeholder="No. HP (WhatsApp)" type="tel" value={form.phone} onChange={e => setForm(f => ({...f, phone: e.target.value}))} />
+              <div className="bg-slate-800/50 rounded-xl p-3 text-sm text-slate-400 flex justify-between">
+                <span>Total pembayaran</span>
+                <span className="text-white font-bold">Rp {plan.amount.toLocaleString('id-ID')}</span>
+              </div>
+              <button onClick={handlePay} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition">
+                💳 Bayar Sekarang — Rp {plan.amount.toLocaleString('id-ID')}
+              </button>
+              <p className="text-center text-slate-500 text-xs">🔒 Pembayaran aman via Duitku · QRIS · Virtual Account · GoPay · OVO</p>
+            </div>
+          )}
+          {step === 'processing' && (
+            <div className="text-center py-8">
+              <div className="animate-spin text-4xl mb-4">⚙️</div>
+              <p className="text-white font-bold">Memproses pembayaran...</p>
+              <p className="text-slate-400 text-sm mt-2">Sedang membuat order di Duitku</p>
+            </div>
+          )}
+          {step === 'result' && result && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="text-5xl mb-3">{(result as Record<string, unknown>).payment_url ? '🎉' : '📋'}</div>
+                <h4 className="text-white font-bold text-lg">{(result as Record<string, unknown>).payment_url ? 'Order Berhasil Dibuat!' : 'Order Diterima!'}</h4>
+                <p className="text-slate-400 text-sm mt-1">Order ID: <span className="text-emerald-400 font-mono text-xs">{result.order_id as string}</span></p>
+              </div>
+              {(result as Record<string, unknown>).payment_url ? (
+                <a href={result.payment_url as string} target="_blank" rel="noopener noreferrer"
+                   className="block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-center transition">
+                  💳 Lanjut ke Halaman Pembayaran
+                </a>
+              ) : (
+                <div className="bg-slate-800 rounded-xl p-4 space-y-2">
+                  <p className="text-emerald-400 font-bold text-sm">📋 Instruksi Pembayaran Manual:</p>
+                  {(result.payment_instructions as string[] || []).map((instr: string, i: number) => (
+                    <p key={i} className="text-slate-300 text-sm">• {instr}</p>
+                  ))}
+                </div>
+              )}
+              <button onClick={onClose} className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-sm transition">
+                Tutup
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SICA: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'ai' | 'pricing'>('dashboard');
   const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
@@ -154,6 +256,7 @@ const SICA: React.FC = () => {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [daysToLebaran, setDaysToLebaran] = useState(32);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [paymentModal, setPaymentModal] = useState<{ id: string; name: string; price: string; amount: number } | null>(null);
 
   // New order form state
   const [newOrder, setNewOrder] = useState({
@@ -781,25 +884,30 @@ const SICA: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 {
+                  id: 'sica-starter',
                   name: 'STARTER',
-                  price: 'Rp 299K',
+                  price: 'Rp 99K',
+                  amount: 99000,
                   period: '/bulan',
                   color: 'border-slate-600',
                   badge: '',
                   features: [
-                    '✅ AI Order Management (100 orders/bln)',
+                    '✅ AI Order Management (50 orders/bln)',
                     '✅ Menu Builder digital',
                     '✅ Template WhatsApp order',
                     '✅ Basic invoice generator',
                     '✅ Stock alert sederhana',
                     '📊 1 user, 1 outlet',
                   ],
-                  limit: 'Max 100 orders/bulan',
+                  limit: 'Max 50 orders/bulan',
                   cta: 'Mulai Gratis 7 Hari',
+                  ctaType: 'pay',
                 },
                 {
+                  id: 'sica-pro',
                   name: 'PROFESIONAL',
-                  price: 'Rp 799K',
+                  price: 'Rp 299K',
+                  amount: 299000,
                   period: '/bulan',
                   color: 'border-emerald-500',
                   badge: '🔥 Paling Populer',
@@ -814,10 +922,13 @@ const SICA: React.FC = () => {
                   ],
                   limit: 'Max 1.000 orders/bulan',
                   cta: 'Mulai Sekarang',
+                  ctaType: 'pay',
                 },
                 {
+                  id: 'sica-enterprise',
                   name: 'ENTERPRISE',
-                  price: 'Rp 2,499K',
+                  price: 'Rp 799K',
+                  amount: 799000,
                   period: '/bulan',
                   color: 'border-purple-500',
                   badge: '💎 For Large Scale',
@@ -833,6 +944,7 @@ const SICA: React.FC = () => {
                   ],
                   limit: 'Unlimited + Dedicated Support',
                   cta: 'Hubungi Sales',
+                  ctaType: 'contact',
                 },
               ].map((plan, i) => (
                 <div key={i} className={`bg-slate-900 border-2 ${plan.color} rounded-xl p-5 relative`}>
@@ -854,13 +966,32 @@ const SICA: React.FC = () => {
                       <li key={fi} className="text-sm text-slate-300">{f}</li>
                     ))}
                   </ul>
-                  <button className={`w-full py-2 rounded-xl font-bold text-sm transition ${
-                    i === 1 ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'
-                  }`}>
-                    {plan.cta}
-                  </button>
+                  {plan.ctaType === 'pay' ? (
+                    <button
+                      onClick={() => setPaymentModal({ id: plan.id, name: `SICA ${plan.name}`, price: plan.price, amount: plan.amount })}
+                      className={`w-full py-2 rounded-xl font-bold text-sm transition ${
+                        i === 1 ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'
+                      }`}>
+                      💳 {plan.cta}
+                    </button>
+                  ) : (
+                    <a href="https://wa.me/6281234567890?text=Halo, saya tertarik dengan SICA Enterprise"
+                       target="_blank" rel="noopener noreferrer"
+                       className="block w-full py-2 rounded-xl font-bold text-sm bg-purple-800 hover:bg-purple-700 text-white text-center transition">
+                      📱 Hubungi Sales
+                    </a>
+                  )}
                 </div>
               ))}
+            </div>
+
+            {/* Payment Badge */}
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-3">
+              <div className="text-3xl">🔒</div>
+              <div>
+                <p className="text-white font-bold text-sm">Pembayaran Aman via Duitku</p>
+                <p className="text-slate-400 text-xs">QRIS · BCA · BNI · BRI · Mandiri · GoPay · OVO · ShopeePay · Dana · Kartu Kredit</p>
+              </div>
             </div>
 
             {/* Revenue Projection */}
@@ -884,6 +1015,7 @@ const SICA: React.FC = () => {
           </div>
         )}
       </div>
+      {paymentModal && <PaymentModal plan={paymentModal} onClose={() => setPaymentModal(null)} />}
     </div>
   );
 };

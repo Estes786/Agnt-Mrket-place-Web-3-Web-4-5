@@ -191,6 +191,108 @@ const paymentStatusConfig = {
   paid: { label: '✅ Lunas', color: 'text-emerald-400' },
 };
 
+// ============================================================
+// Payment Modal Component (Duitku)
+// ============================================================
+interface PaymentModalProps {
+  plan: { id: string; name: string; price: string; amount: number };
+  onClose: () => void;
+}
+
+const PaymentModal: React.FC<PaymentModalProps> = ({ plan, onClose }) => {
+  const [step, setStep] = useState<'form' | 'processing' | 'result'>('form');
+  const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState('');
+
+  const handlePay = async () => {
+    if (!form.name || !form.email) { setError('Nama & email wajib diisi!'); return; }
+    setError('');
+    setStep('processing');
+    try {
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: plan.id, customer_name: form.name, customer_email: form.email, customer_phone: form.phone, payment_method: 'VC' })
+      });
+      const data = await res.json() as Record<string, unknown>;
+      setResult(data);
+      setStep('result');
+    } catch {
+      setError('Gagal membuat order. Coba lagi.');
+      setStep('form');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md">
+        <div className="p-5 border-b border-slate-700 flex justify-between items-center">
+          <div>
+            <h3 className="font-bold text-white text-lg">💳 Berlangganan SHGA</h3>
+            <p className="text-amber-400 text-sm font-semibold">{plan.name} — {plan.price}/bulan</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">×</button>
+        </div>
+        <div className="p-5">
+          {step === 'form' && (
+            <div className="space-y-4">
+              <p className="text-slate-400 text-sm">Isi data untuk memulai berlangganan. Pembayaran aman via <span className="text-amber-400 font-semibold">Duitku</span> (QRIS, VA, GoPay, OVO, dll).</p>
+              {error && <div className="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded-lg p-3">{error}</div>}
+              <input className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500"
+                placeholder="Nama Lengkap *" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
+              <input className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500"
+                placeholder="Email *" type="email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} />
+              <input className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500"
+                placeholder="No. HP (WhatsApp)" type="tel" value={form.phone} onChange={e => setForm(f => ({...f, phone: e.target.value}))} />
+              <div className="bg-slate-800/50 rounded-xl p-3 text-sm text-slate-400 flex justify-between">
+                <span>Total pembayaran</span>
+                <span className="text-white font-bold">Rp {plan.amount.toLocaleString('id-ID')}</span>
+              </div>
+              <button onClick={handlePay} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition">
+                💳 Bayar Sekarang — Rp {plan.amount.toLocaleString('id-ID')}
+              </button>
+              <p className="text-center text-slate-500 text-xs">🔒 Pembayaran aman via Duitku · QRIS · Virtual Account · GoPay · OVO</p>
+            </div>
+          )}
+          {step === 'processing' && (
+            <div className="text-center py-8">
+              <div className="animate-spin text-4xl mb-4">⚙️</div>
+              <p className="text-white font-bold">Memproses pembayaran...</p>
+              <p className="text-slate-400 text-sm mt-2">Sedang membuat order di Duitku</p>
+            </div>
+          )}
+          {step === 'result' && result && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="text-5xl mb-3">{(result as Record<string, unknown>).payment_url ? '🎉' : '📋'}</div>
+                <h4 className="text-white font-bold text-lg">{(result as Record<string, unknown>).payment_url ? 'Order Berhasil Dibuat!' : 'Order Diterima!'}</h4>
+                <p className="text-slate-400 text-sm mt-1">Order ID: <span className="text-amber-400 font-mono text-xs">{result.order_id as string}</span></p>
+              </div>
+              {(result as Record<string, unknown>).payment_url ? (
+                <a href={result.payment_url as string} target="_blank" rel="noopener noreferrer"
+                   className="block w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl text-center transition">
+                  💳 Lanjut ke Halaman Pembayaran
+                </a>
+              ) : (
+                <div className="bg-slate-800 rounded-xl p-4 space-y-2">
+                  <p className="text-amber-400 font-bold text-sm">📋 Instruksi Pembayaran:</p>
+                  {(result.payment_instructions as string[] || []).map((instr: string, i: number) => (
+                    <p key={i} className="text-slate-300 text-sm">• {instr}</p>
+                  ))}
+                </div>
+              )}
+              <button onClick={onClose} className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-sm transition">
+                Tutup
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SHGA: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'catalog' | 'orders' | 'ai' | 'pricing'>('dashboard');
   const [orders, setOrders] = useState<HamperOrder[]>(MOCK_HAMPER_ORDERS);
@@ -199,6 +301,7 @@ const SHGA: React.FC = () => {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [daysToLebaran, setDaysToLebaran] = useState(32);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [paymentModal, setPaymentModal] = useState<{ id: string; name: string; price: string; amount: number } | null>(null);
 
   const [newOrder, setNewOrder] = useState({
     customer: '', phone: '', product_id: '', quantity: 10,
@@ -758,48 +861,71 @@ const SHGA: React.FC = () => {
               <h2 className="text-xl font-bold text-white">💰 Paket SHGA</h2>
               <p className="text-slate-400 text-sm">Platform manajemen hamper & gifting sovereign untuk bisnis Anda</p>
             </div>
+
+            {/* Lebaran Special Banner */}
+            <div className="bg-gradient-to-r from-amber-900/40 to-orange-900/40 border border-amber-500/30 rounded-xl p-4 flex items-center gap-3">
+              <div className="text-3xl">🌙</div>
+              <div>
+                <p className="text-amber-400 font-bold">🔥 PROMO RAMADAN — H-{daysToLebaran} Lebaran!</p>
+                <p className="text-slate-300 text-sm">Daftar sekarang, FREE setup + onboarding khusus untuk bisnis hamper Lebaran</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 {
-                  name: 'STARTER', price: 'Rp 299K', period: '/bulan',
+                  id: 'shga-starter', name: 'STARTER', price: 'Rp 99K', amount: 99000, period: '/bulan',
                   color: 'border-slate-600', badge: '',
                   features: ['✅ Katalog produk digital (20 item)', '✅ Order management basic', '✅ Invoice generator', '✅ WhatsApp notification template', '✅ Stock tracking sederhana', '📊 1 user, 50 orders/bulan'],
-                  cta: 'Mulai Gratis 7 Hari',
+                  cta: 'Mulai Gratis 7 Hari', ctaType: 'pay',
                 },
                 {
-                  name: 'BISNIS', price: 'Rp 799K', period: '/bulan',
-                  color: 'border-amber-500', badge: '🔥 Best Value',
+                  id: 'shga-lebaran', name: '🌙 LEBARAN SPECIAL', price: 'Rp 499K', amount: 499000, period: '/musim',
+                  color: 'border-amber-500', badge: '🔥 Terlaris Musim Ini',
+                  features: ['✅ Semua fitur Bisnis +', '✅ Unlimited order selama musim', '✅ Bulk order management (100+)', '✅ Custom branding & packaging', '✅ Laporan keuangan PDF', '✅ Priority support WA', '📊 H-45 s/d H+7 Lebaran'],
+                  cta: 'Pesan Sekarang!', ctaType: 'pay',
+                },
+                {
+                  id: 'shga-pro', name: 'BISNIS', price: 'Rp 299K', amount: 299000, period: '/bulan',
+                  color: 'border-purple-500', badge: '💎 Year-Round',
                   features: ['✅ Semua Starter +', '✅ AI Recommendation Engine', '✅ Custom branding & packaging', '✅ Customer CRM + repeat order', '✅ Revenue analytics', '✅ Multi-outlet (3)', '📊 3 user, 500 orders/bulan'],
-                  cta: 'Mulai Sekarang',
-                },
-                {
-                  name: 'ENTERPRISE', price: 'Rp 2,499K', period: '/bulan',
-                  color: 'border-purple-500', badge: '💎 Korporat',
-                  features: ['✅ Semua Bisnis +', '✅ AI Demand Forecasting', '✅ Bulk order automation', '✅ Supplier management', '✅ Custom white-label', '✅ API access penuh', '📊 Unlimited semua'],
-                  cta: 'Hubungi Sales',
+                  cta: 'Mulai Sekarang', ctaType: 'pay',
                 },
               ].map((plan, i) => (
                 <div key={i} className={`bg-slate-900 border-2 ${plan.color} rounded-xl p-5 relative`}>
                   {plan.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-600 text-white text-xs px-3 py-1 rounded-full whitespace-nowrap font-medium">
+                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 ${i === 1 ? 'bg-amber-600' : 'bg-purple-700'} text-white text-xs px-3 py-1 rounded-full whitespace-nowrap font-medium`}>
                       {plan.badge}
                     </div>
                   )}
                   <div className="mb-4">
                     <div className="font-black text-white text-lg">{plan.name}</div>
                     <div className="flex items-end gap-1 mt-1">
-                      <span className="text-3xl font-black text-amber-400">{plan.price}</span>
+                      <span className={`text-3xl font-black ${i === 1 ? 'text-amber-400' : 'text-amber-300'}`}>{plan.price}</span>
                       <span className="text-slate-400 text-sm mb-1">{plan.period}</span>
                     </div>
                   </div>
                   <ul className="space-y-2 mb-5">
                     {plan.features.map((f, fi) => (<li key={fi} className="text-sm text-slate-300">{f}</li>))}
                   </ul>
-                  <button className={`w-full py-2 rounded-xl font-bold text-sm transition ${
-                    i === 1 ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'
-                  }`}>{plan.cta}</button>
+                  <button
+                    onClick={() => setPaymentModal({ id: plan.id, name: `SHGA ${plan.name}`, price: plan.price, amount: plan.amount })}
+                    className={`w-full py-2 rounded-xl font-bold text-sm transition ${
+                      i === 1 ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'
+                    }`}>
+                    💳 {plan.cta}
+                  </button>
                 </div>
               ))}
+            </div>
+
+            {/* Payment Badge */}
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-3">
+              <div className="text-3xl">🔒</div>
+              <div>
+                <p className="text-white font-bold text-sm">Pembayaran Aman via Duitku</p>
+                <p className="text-slate-400 text-xs">QRIS · BCA · BNI · BRI · Mandiri · GoPay · OVO · ShopeePay · Dana · Kartu Kredit</p>
+              </div>
             </div>
 
             {/* Revenue Projection */}
@@ -823,6 +949,7 @@ const SHGA: React.FC = () => {
           </div>
         )}
       </div>
+      {paymentModal && <PaymentModal plan={paymentModal} onClose={() => setPaymentModal(null)} />}
     </div>
   );
 };

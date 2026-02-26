@@ -1948,7 +1948,7 @@ app.get('/api/sovereign/status', (c) => {
     web25_bridge: {
       status: 'active',
       auth_layers: ['email_password', 'web3auth', 'metamask'],
-      payment_methods: ['midtrans_idr', 'stripe_usd', 'hypha_token'],
+      payment_methods: ['duitku_idr', 'stripe_usd', 'hypha_token'],
       rewards_token: 'HYPHA',
       governance_token: 'PREMALTA'
     },
@@ -1957,6 +1957,232 @@ app.get('/api/sovereign/status', (c) => {
       HYPHA: { contract: null, network: 'Ethereum', status: 'planned_q3_2026' }
     }
   })
+})
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: DUITKU PAYMENT GATEWAY
+// Payment integration untuk SCA, SICA, SHGA subscriptions
+// Merchant Code: DS28466 | API Key: di .dev.vars
+// Docs: https://docs.duitku.com
+// ══════════════════════════════════════════════════════════════
+
+// Helper: Generate MD5 signature Duitku
+async function duitkuMd5(str: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(str)
+  const hashBuffer = await crypto.subtle.digest('MD5', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// Plan definitions
+const SUBSCRIPTION_PLANS: Record<string, { name: string; amount: number; agent: string; description: string }> = {
+  // SCA Plans
+  'sca-starter': { name: 'SCA Starter', amount: 149000, agent: 'SCA', description: 'Analisis kontrak 10x/bulan — Cocok untuk freelancer & UKM' },
+  'sca-pro': { name: 'SCA Professional', amount: 499000, agent: 'SCA', description: 'Analisis kontrak unlimited/bulan + priority support' },
+  'sca-enterprise': { name: 'SCA Enterprise', amount: 1499000, agent: 'SCA', description: 'Multi-user, white-label, API access langsung' },
+  // SICA Plans
+  'sica-starter': { name: 'SICA Starter', amount: 99000, agent: 'SICA', description: 'Manajemen order katering 50 pesanan/bulan' },
+  'sica-pro': { name: 'SICA Professional', amount: 299000, agent: 'SICA', description: 'Unlimited order + AI menu recommendations + laporan keuangan' },
+  'sica-enterprise': { name: 'SICA Enterprise', amount: 799000, agent: 'SICA', description: 'Multi-cabang, WhatsApp bot, dashboard custom' },
+  // SHGA Plans
+  'shga-starter': { name: 'SHGA Starter', amount: 99000, agent: 'SHGA', description: 'Katalog hamper 20 produk, order tracking basic' },
+  'shga-pro': { name: 'SHGA Professional', amount: 299000, agent: 'SHGA', description: 'Unlimited produk + AI gift recommendations + bulk order' },
+  'shga-lebaran': { name: 'SHGA Lebaran Special', amount: 499000, agent: 'SHGA', description: 'Paket lengkap untuk musim Lebaran: bulk order, custom hamper, pengiriman' },
+}
+
+// POST /api/payment/create — Buat transaksi pembayaran Duitku
+app.post('/api/payment/create', async (c) => {
+  const env = c.env as Record<string, string>
+  const merchantCode = env.DUITKU_MERCHANT_CODE || 'DS28466'
+  const apiKey = env.DUITKU_API_KEY
+  
+  if (!apiKey) {
+    return c.json({ success: false, error: 'Payment gateway not configured' }, 500)
+  }
+
+  const body = await c.req.json() as {
+    plan_id: string
+    customer_email: string
+    customer_name: string
+    customer_phone?: string
+    payment_method?: string
+  }
+
+  const { plan_id, customer_email, customer_name, customer_phone, payment_method } = body
+
+  const plan = SUBSCRIPTION_PLANS[plan_id]
+  if (!plan) {
+    return c.json({ success: false, error: `Plan '${plan_id}' tidak ditemukan`, available_plans: Object.keys(SUBSCRIPTION_PLANS) }, 400)
+  }
+
+  // Generate unique merchant order ID
+  const timestamp = Date.now()
+  const merchantOrderId = `${merchantCode}-${plan_id.toUpperCase()}-${timestamp}`
+  
+  // Calculate expiry: 24 hours from now
+  const expiryDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  const expiryStr = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth()+1).padStart(2,'0')}-${String(expiryDate.getDate()).padStart(2,'0')} ${String(expiryDate.getHours()).padStart(2,'0')}:${String(expiryDate.getMinutes()).padStart(2,'0')}:${String(expiryDate.getSeconds()).padStart(2,'0')}`
+
+  // Generate signature: MD5(merchantCode + amount + merchantOrderId + apiKey)
+  const signatureRaw = `${merchantCode}${plan.amount}${merchantOrderId}${apiKey}`
+  const signature = await duitkuMd5(signatureRaw)
+
+  const requestBody = {
+    merchantCode,
+    paymentAmount: plan.amount,
+    merchantOrderId,
+    productDetails: `${plan.name} - ${plan.agent} Agent | ${plan.description}`,
+    customerVaName: customer_name,
+    email: customer_email,
+    phoneNumber: customer_phone || '',
+    paymentMethod: payment_method || 'VC', // VC = semua metode, VA = Virtual Account, etc
+    returnUrl: `https://gani-hypha-web3.pages.dev/payment/success?order=${merchantOrderId}`,
+    callbackUrl: `https://gani-hypha-web3.pages.dev/api/payment/callback`,
+    signature,
+    expiryPeriod: 1440, // 24 jam dalam menit
+  }
+
+  try {
+    const response = await fetch('https://passport.duitku.com/webapi/api/merchant/v2/inquiry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(requestBody)
+    })
+
+    const data = await response.json() as Record<string, unknown>
+
+    if (data.statusCode === '00') {
+      return c.json({
+        success: true,
+        order_id: merchantOrderId,
+        payment_url: data.paymentUrl,
+        va_number: data.vaNumber,
+        qr_string: data.qrString,
+        amount: plan.amount,
+        plan: plan.name,
+        agent: plan.agent,
+        expires_at: expiryStr,
+        message: `Pembayaran ${plan.name} berhasil dibuat! Silakan bayar sebelum ${expiryStr}`
+      })
+    } else {
+      // Fallback: return manual payment info jika Duitku error (sandbox/test mode)
+      return c.json({
+        success: true,
+        mode: 'manual_payment',
+        order_id: merchantOrderId,
+        amount: plan.amount,
+        plan: plan.name,
+        agent: plan.agent,
+        payment_instructions: [
+          `Transfer ke: BCA 1234567890 a.n GANI HYPHA`,
+          `Jumlah: Rp ${plan.amount.toLocaleString('id-ID')}`,
+          `Berita: ${merchantOrderId}`,
+          `Konfirmasi ke: elmatador0197@gmail.com`
+        ],
+        duitku_response: data,
+        message: `Order ${merchantOrderId} dibuat. Hubungi admin untuk konfirmasi pembayaran.`
+      })
+    }
+  } catch (err) {
+    const error = err as Error
+    // Fallback mode jika Duitku tidak tersedia
+    return c.json({
+      success: true,
+      mode: 'manual_payment',
+      order_id: merchantOrderId,
+      amount: plan.amount,
+      plan: plan.name,
+      agent: plan.agent,
+      payment_instructions: [
+        `Transfer ke: BCA 1234567890 a.n GANI HYPHA`,
+        `Jumlah: Rp ${plan.amount.toLocaleString('id-ID')}`,
+        `Berita: ${merchantOrderId}`,
+        `Konfirmasi ke: elmatador0197@gmail.com atau WhatsApp admin`
+      ],
+      message: `Order dibuat. Hubungi admin untuk konfirmasi pembayaran manual.`
+    })
+  }
+})
+
+// GET /api/payment/plans — Daftar semua plan tersedia
+app.get('/api/payment/plans', (c) => {
+  return c.json({
+    success: true,
+    plans: Object.entries(SUBSCRIPTION_PLANS).map(([id, plan]) => ({
+      id,
+      ...plan,
+      amount_formatted: `Rp ${plan.amount.toLocaleString('id-ID')}`
+    })),
+    payment_methods: [
+      { code: 'VC', name: 'Semua Metode (Rekomendasikan)' },
+      { code: 'VA', name: 'Virtual Account (BCA, BNI, BRI, Mandiri)' },
+      { code: 'OV', name: 'OVO' },
+      { code: 'DA', name: 'DANA' },
+      { code: 'SA', name: 'ShopeePay' },
+      { code: 'LT', name: 'LinkAja' },
+      { code: 'QRIS', name: 'QRIS' },
+      { code: 'C1', name: 'Kartu Kredit Visa/Mastercard' },
+    ]
+  })
+})
+
+// GET /api/payment/check/:orderId — Cek status pembayaran
+app.get('/api/payment/check/:orderId', async (c) => {
+  const env = c.env as Record<string, string>
+  const merchantCode = env.DUITKU_MERCHANT_CODE || 'DS28466'
+  const apiKey = env.DUITKU_API_KEY
+  const orderId = c.req.param('orderId')
+
+  if (!apiKey) {
+    return c.json({ success: false, error: 'Payment gateway not configured' }, 500)
+  }
+
+  const signatureRaw = `${merchantCode}${orderId}${apiKey}`
+  const signature = await duitkuMd5(signatureRaw)
+
+  try {
+    const response = await fetch('https://passport.duitku.com/webapi/api/merchant/transactionStatus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchantCode, merchantOrderId: orderId, signature })
+    })
+    const data = await response.json() as Record<string, unknown>
+
+    return c.json({
+      success: true,
+      order_id: orderId,
+      status: data.statusCode === '00' ? 'paid' : data.statusCode === '01' ? 'pending' : 'failed',
+      status_message: data.statusMessage,
+      raw: data
+    })
+  } catch (err) {
+    return c.json({ success: false, error: 'Gagal cek status pembayaran' }, 500)
+  }
+})
+
+// POST /api/payment/callback — Webhook dari Duitku (notifikasi pembayaran berhasil)
+app.post('/api/payment/callback', async (c) => {
+  const env = c.env as Record<string, string>
+  const apiKey = env.DUITKU_API_KEY
+  const body = await c.req.json() as Record<string, string>
+
+  const { merchantCode, amount, merchantOrderId, productDetail, additionalParam, paymentCode, resultCode, merchantUserId, reference, signature } = body
+
+  // Verify signature: MD5(merchantCode + amount + merchantOrderId + apiKey)
+  const expectedSig = await duitkuMd5(`${merchantCode}${amount}${merchantOrderId}${apiKey}`)
+
+  if (signature !== expectedSig) {
+    return c.json({ success: false, error: 'Invalid signature' }, 400)
+  }
+
+  // resultCode '00' = success
+  if (resultCode === '00') {
+    // TODO: Update subscription status di Supabase
+    console.log(`✅ Payment SUCCESS: ${merchantOrderId} | Amount: ${amount} | Ref: ${reference}`)
+  }
+
+  return c.json({ success: true, message: 'Callback received', order_id: merchantOrderId, status: resultCode === '00' ? 'paid' : 'pending' })
 })
 
 // ══════════════════════════════════════════════════════════════
