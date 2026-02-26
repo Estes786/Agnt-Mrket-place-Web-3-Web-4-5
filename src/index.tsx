@@ -73,20 +73,33 @@ type Bindings = {
 
 // ── Supabase Config ─────────────────────────────────────────
 // Keys diambil dari environment variables (wrangler secrets / .dev.vars)
-// Fallback placeholder untuk development (GANTI dengan nilai asli di .dev.vars)
-const SB_URL = 'https://drhitwkbkdnnepnnqbmo.supabase.co'
-// SECURITY: Jangan hardcode keys di sini. Gunakan env vars.
+// SECURITY: Tidak ada hardcoded keys di source code.
 // Set di .dev.vars: SUPABASE_ANON_KEY=... dan SUPABASE_SERVICE_ROLE_KEY=...
-const SB_ANON_FALLBACK = '' // kosong — akan error jika tidak ada di env
-const SB_SERVICE_FALLBACK = '' // kosong — akan error jika tidak ada di env
+const SB_URL = 'https://drhitwkbkdnnepnnqbmo.supabase.co'
 
-const SB_ANON = SB_ANON_FALLBACK // alias untuk backward compat
-async function sbFetch(path: string, opts: RequestInit = {}, useService = false) {
-  // Ambil dari env (injected oleh Cloudflare Pages / wrangler dev)
-  // Karena ini module-level, kita tidak punya akses ke c.env di sini
-  // Solusi: hardcode atau gunakan global (tidak ideal untuk production)
-  // Untuk production: pindahkan ke dalam handler dengan akses c.env
-  const key = useService ? SB_SERVICE_FALLBACK : SB_ANON_FALLBACK
+// Global state untuk env keys (di-set oleh middleware)
+let _sbAnon = ''
+let _sbService = ''
+
+// Untuk backward compat dengan kode yang masih gunakan SB_ANON langsung
+// (akan '' jika belum di-set via middleware, yang menyebabkan Supabase error gracefully)
+const SB_ANON = '' // Deprecated: gunakan env vars via c.env
+
+// ── Supabase Helpers ─────────────────────────────────────────
+// Middleware untuk set Supabase keys dari env ke global state
+// Dipanggil di awal setiap request yang butuh Supabase
+function getSbKeys(env: Record<string, string>): { anon: string; service: string } {
+  const anon = env.SUPABASE_ANON_KEY || _sbAnon || ''
+  const service = env.SUPABASE_SERVICE_ROLE_KEY || _sbService || ''
+  // Cache ke global untuk panggilan selanjutnya
+  if (anon) _sbAnon = anon
+  if (service) _sbService = service
+  return { anon, service }
+}
+
+async function sbFetch(path: string, opts: RequestInit = {}, useService = false, envKeys?: { anon: string; service: string }) {
+  const keys = envKeys || { anon: _sbAnon, service: _sbService }
+  const key = useService ? keys.service : keys.anon
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...opts,
     headers: {
@@ -136,6 +149,14 @@ app.use('/api/*', cors({
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-User-Role'],
 }))
+
+// ── Global env keys middleware (inject Supabase keys dari CF secrets) ──
+app.use('*', async (c, next) => {
+  const env = c.env as Record<string, string>
+  if (env.SUPABASE_ANON_KEY && !_sbAnon) _sbAnon = env.SUPABASE_ANON_KEY
+  if (env.SUPABASE_SERVICE_ROLE_KEY && !_sbService) _sbService = env.SUPABASE_SERVICE_ROLE_KEY
+  await next()
+})
 
 // ══════════════════════════════════════════════════════════════
 // SECTION 1: PLATFORM STATUS
