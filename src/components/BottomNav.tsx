@@ -9,11 +9,11 @@ interface BottomNavProps {
 const BottomNav: React.FC<BottomNavProps> = ({ activePodsCount }) => {
   const items = [
     { path: '/', icon: '🏪', label: 'Market' },
+    { path: '/store', icon: '🛍️', label: 'Store' },
     { path: '/dashboard', icon: '⚡', label: 'Pods', badge: activePodsCount },
-    { path: '/supabase', icon: '🗄️', label: 'DB' },
-    { path: '/build', icon: '📡', label: 'Build' },
-    { path: '/revenue', icon: '💰', label: 'Revenue' },
-    { path: '/master', icon: '🎛️', label: 'Control' },
+    { path: '/shga', icon: '🎁', label: 'SHGA' },
+    { path: '/sica', icon: '🌙', label: 'SICA' },
+    { path: '/sca', icon: '⚖️', label: 'SCA' },
   ];
 
   return (

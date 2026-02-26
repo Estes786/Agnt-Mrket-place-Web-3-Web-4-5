@@ -35,6 +35,7 @@ const SCA = lazy(() => import('./components/SCA'));
 const SICA = lazy(() => import('./components/SICA'));
 const SHGA = lazy(() => import('./components/SHGA'));
 const SCALanding = lazy(() => import('./components/SCALanding'));
+const SovereignStore = lazy(() => import('./components/SovereignStore'));
 
 // Loading fallback component
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
@@ -52,7 +53,7 @@ const App: React.FC = () => {
   const location = useLocation();
   
   // Public routes yang tidak butuh app layout (sidebar, header, dll)
-  const isPublicPage = location.pathname === '/sca' || location.pathname.startsWith('/sca-landing') || location.pathname.startsWith('/payment');
+  const isPublicPage = location.pathname.startsWith('/payment');
   
   // Jika ini public page, render tanpa app layout
   if (isPublicPage) {
@@ -434,8 +435,10 @@ const App: React.FC = () => {
             <Route path="/supabase" element={<SupabaseDashboard />} />
             <Route path="/build" element={<BuildInPublic />} />
             <Route path="/sca/app" element={<SCA />} />
+            <Route path="/sca" element={<SCA />} />
             <Route path="/sica" element={<SICA />} />
             <Route path="/shga" element={<SHGA />} />
+            <Route path="/store" element={<SovereignStore />} />
           </Routes>
           </Suspense>
         </main>

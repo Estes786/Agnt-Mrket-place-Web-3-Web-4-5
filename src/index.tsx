@@ -69,6 +69,11 @@ type Bindings = {
   // ── GitHub / Cloudflare ────────────────────
   GITHUB_TOKEN?: string;
   CLOUDFLARE_API_TOKEN?: string;
+  // ── Duitku Payment Gateway ─────────────────
+  DUITKU_MERCHANT_CODE?: string;
+  DUITKU_API_KEY?: string;
+  DUITKU_ENV?: string;
+  DUITKU_CALLBACK_URL?: string;
 }
 
 // ── Supabase Config ─────────────────────────────────────────
@@ -2274,6 +2279,16 @@ app.post('/api/payment/create', async (c) => {
     const data = await response.json() as Record<string, unknown>
 
     if (data.statusCode === '00' && data.paymentUrl) {
+      // Simpan order ke Supabase
+      const sbUrl = 'https://drhitwkbkdnnepnnqbmo.supabase.co'
+      const sbKey = (c.env as Record<string,string>).SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyaGl0d2tia2RubmVwbm5xYm1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTk5OTEwNSwiZXhwIjoyMDg3NTc1MTA1fQ.QTlZlVOr4sdH3R5OPG6YUp_N_-hWP1OFSx8_dIawlkY'
+      try {
+        await fetch(`${sbUrl}/rest/v1/payment_orders`, {
+          method: 'POST',
+          headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ merchant_order_id: merchantOrderId, plan_id, agent: plan.agent, customer_name, customer_email, customer_phone: customer_phone || '', amount: plan.amount, status: 'pending', duitku_reference: data.reference as string, payment_url: data.paymentUrl as string })
+        })
+      } catch {}
       return c.json({
         success: true,
         mode: isSandbox ? 'sandbox' : 'production',
@@ -2470,8 +2485,34 @@ app.post('/api/payment/callback', async (c) => {
   // resultCode '00' = success, '01' = failed
   if (resultCode === '00') {
     console.log(`✅ Payment SUCCESS: ${merchantOrderId} | Amount: ${amount} | Ref: ${reference}`)
-    // TODO: Update subscription status di Supabase
-    // await sbPost('payment_orders', { order_id: merchantOrderId, status: 'paid', reference, amount }, true)
+    // Update payment_orders di Supabase via REST
+    try {
+      const sbUrl = 'https://drhitwkbkdnnepnnqbmo.supabase.co'
+      const sbKey = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyaGl0d2tia2RubmVwbm5xYm1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTk5OTEwNSwiZXhwIjoyMDg3NTc1MTA1fQ.QTlZlVOr4sdH3R5OPG6YUp_N_-hWP1OFSx8_dIawlkY'
+      await fetch(`${sbUrl}/rest/v1/payment_orders`, {
+        method: 'POST',
+        headers: {
+          'apikey': sbKey,
+          'Authorization': `Bearer ${sbKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          merchant_order_id: merchantOrderId,
+          plan_id: merchantOrderId.split('-').slice(1, -1).join('-').toLowerCase() || 'unknown',
+          agent: merchantOrderId.split('-')[1] || 'unknown',
+          customer_name: 'via-duitku-callback',
+          customer_email: 'callback@duitku.com',
+          amount: parseInt(amount),
+          status: 'paid',
+          duitku_reference: reference,
+          callback_data: body
+        })
+      })
+      console.log('✅ Payment saved to Supabase')
+    } catch (sbErr) {
+      console.error('⚠️ Supabase save failed:', sbErr)
+    }
   } else {
     console.log(`❌ Payment FAILED: ${merchantOrderId} | ResultCode: ${resultCode}`)
   }
