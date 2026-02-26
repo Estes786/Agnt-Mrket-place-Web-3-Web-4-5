@@ -408,6 +408,133 @@ app.get('/api/blockchain/balance/:address', async (c) => {
 })
 
 // ══════════════════════════════════════════════════════════════
+// SECTION 5B: REAL PRICE FEEDS (CoinGecko + Alchemy)
+// ══════════════════════════════════════════════════════════════
+
+// Cache sederhana di-memory (worker scope)
+let priceCache: { data: Record<string, unknown>; timestamp: number } | null = null
+const CACHE_TTL = 60_000 // 1 menit
+
+app.get('/api/prices/eth', async (c) => {
+  try {
+    const now = Date.now()
+    if (priceCache && (now - priceCache.timestamp) < CACHE_TTL && priceCache.data.eth_usd) {
+      return c.json({ ...priceCache.data, cached: true })
+    }
+
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,idr',
+      { headers: { 'Accept': 'application/json', 'User-Agent': 'GANI-HYPHA/5.2' } }
+    )
+    const data = await res.json() as { ethereum?: { usd: number; idr: number } }
+    
+    const result = {
+      eth_usd: data.ethereum?.usd || 3500,
+      eth_idr: data.ethereum?.idr || 56_000_000,
+      source: 'CoinGecko',
+      timestamp: new Date().toISOString(),
+      cached: false
+    }
+    priceCache = { data: result, timestamp: now }
+    return c.json(result)
+  } catch {
+    return c.json({ eth_usd: 3500, eth_idr: 56_000_000, source: 'Fallback', timestamp: new Date().toISOString(), cached: false })
+  }
+})
+
+app.get('/api/prices/base-gas', async (c) => {
+  try {
+    const alchemyBase = `https://base-mainnet.g.alchemy.com/v2/${c.env?.ALCHEMY_API_KEY || c.env?.VITE_ALCHEMY_API_KEY || 'TOHei2xGaHxbHUneplEnx-biKQBtdOAq'}`
+    const res = await fetch(alchemyBase, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_gasPrice', params: [], id: 1 })
+    })
+    const data = await res.json() as { result?: string }
+    const gasPriceGwei = data.result ? (parseInt(data.result, 16) / 1e9).toFixed(4) : '0.002'
+    return c.json({ success: true, gasPriceGwei, network: 'Base', provider: 'Alchemy', timestamp: new Date().toISOString() })
+  } catch {
+    return c.json({ success: true, gasPriceGwei: '0.002', network: 'Base', provider: 'Fallback' })
+  }
+})
+
+app.get('/api/prices/premalta', async (c) => {
+  // $PREMALTA contract: 0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7 on Base
+  // Status: DEPLOYED tapi belum ada Uniswap liquidity
+  // Fetch dari DexScreener (free, no key needed) jika sudah ada pool
+  try {
+    const contractAddress = '0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7'
+    const dexRes = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`,
+      { headers: { 'Accept': 'application/json' } }
+    )
+    const dexData = await dexRes.json() as { pairs?: Array<{ priceUsd?: string; volume?: { h24: number }; liquidity?: { usd: number }; txns?: { h24: { buys: number; sells: number } } }> }
+    
+    if (dexData.pairs && dexData.pairs.length > 0) {
+      const pair = dexData.pairs[0]
+      return c.json({
+        symbol: 'PREMALTA',
+        contract: contractAddress,
+        network: 'Base',
+        price_usd: parseFloat(pair.priceUsd || '0'),
+        volume_24h: pair.volume?.h24 || 0,
+        liquidity_usd: pair.liquidity?.usd || 0,
+        txns_24h: pair.txns?.h24 || { buys: 0, sells: 0 },
+        has_liquidity: true,
+        source: 'DexScreener',
+        timestamp: new Date().toISOString()
+      })
+    }
+    
+    // Belum ada pool
+    return c.json({
+      symbol: 'PREMALTA',
+      contract: contractAddress,
+      network: 'Base',
+      price_usd: 0,
+      volume_24h: 0,
+      liquidity_usd: 0,
+      has_liquidity: false,
+      status: 'deployed_pending_liquidity',
+      uniswap_url: `https://app.uniswap.org/#/add/ETH/${contractAddress}/3000?chain=base`,
+      message: 'Butuh $300-500 USDC untuk buat pool di Uniswap V3 Base',
+      source: 'DexScreener',
+      timestamp: new Date().toISOString()
+    })
+  } catch {
+    return c.json({
+      symbol: 'PREMALTA',
+      contract: '0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7',
+      network: 'Base',
+      price_usd: 0,
+      has_liquidity: false,
+      status: 'no_pool_yet',
+      source: 'Fallback',
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// Master price dashboard endpoint
+app.get('/api/prices/all', async (c) => {
+  try {
+    const [ethRes, baseGasRes, premaltaRes] = await Promise.allSettled([
+      fetch(`${new URL(c.req.url).origin}/api/prices/eth`),
+      fetch(`${new URL(c.req.url).origin}/api/prices/base-gas`),
+      fetch(`${new URL(c.req.url).origin}/api/prices/premalta`),
+    ])
+    
+    const eth = ethRes.status === 'fulfilled' ? await ethRes.value.json() : { eth_usd: 3500 }
+    const gas = baseGasRes.status === 'fulfilled' ? await baseGasRes.value.json() : { gasPriceGwei: '0.002' }
+    const premalta = premaltaRes.status === 'fulfilled' ? await premaltaRes.value.json() : { price_usd: 0 }
+    
+    return c.json({ eth, gas, premalta, timestamp: new Date().toISOString() })
+  } catch (e) {
+    return c.json({ error: String(e) }, 500)
+  }
+})
+
+// ══════════════════════════════════════════════════════════════
 // SECTION 6: IPFS / PINATA
 // ══════════════════════════════════════════════════════════════
 

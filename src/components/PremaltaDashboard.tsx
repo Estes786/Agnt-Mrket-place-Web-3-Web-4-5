@@ -1,11 +1,76 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, LineChart, Line } from 'recharts';
 import { PREMALTA_TOKEN, PREMALTA_DEFI, WHALE_ANALYTICS } from '../constants';
+
+interface PriceData {
+  eth_usd: number;
+  eth_idr: number;
+  source: string;
+  timestamp: string;
+}
+
+interface PremaltaPrice {
+  price_usd: number;
+  has_liquidity: boolean;
+  liquidity_usd: number;
+  volume_24h: number;
+  status?: string;
+  source: string;
+}
+
+interface GasData {
+  gasPriceGwei: string;
+  network: string;
+}
 
 const PremaltaDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'tokenomics' | 'liquidity' | 'whale' | 'roadmap'>('overview');
   const [stakeAmount, setStakeAmount] = useState('');
   const [selectedLock, setSelectedLock] = useState(0);
+  
+  // 🔥 REAL PRICE STATE
+  const [ethPrice, setEthPrice] = useState<PriceData | null>(null);
+  const [premaltaPrice, setPremaltaPrice] = useState<PremaltaPrice | null>(null);
+  const [gasPrice, setGasPrice] = useState<GasData | null>(null);
+  const [priceLoading, setPriceLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+
+  // Fetch real prices
+  const fetchPrices = async () => {
+    setPriceLoading(true);
+    try {
+      const [ethRes, premaltaRes, gasRes] = await Promise.allSettled([
+        fetch('/api/prices/eth'),
+        fetch('/api/prices/premalta'),
+        fetch('/api/prices/base-gas'),
+      ]);
+      
+      if (ethRes.status === 'fulfilled') {
+        const data = await ethRes.value.json() as PriceData;
+        setEthPrice(data);
+      }
+      if (premaltaRes.status === 'fulfilled') {
+        const data = await premaltaRes.value.json() as PremaltaPrice;
+        setPremaltaPrice(data);
+      }
+      if (gasRes.status === 'fulfilled') {
+        const data = await gasRes.value.json() as GasData;
+        setGasPrice(data);
+      }
+      setLastUpdated(new Date().toLocaleTimeString('id-ID'));
+    } catch (e) {
+      console.error('Price fetch error:', e);
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrices();
+    // Auto-refresh setiap 60 detik
+    const interval = setInterval(fetchPrices, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const pt = PREMALTA_TOKEN;
   const pd = PREMALTA_DEFI;
@@ -98,6 +163,73 @@ const PremaltaDashboard: React.FC = () => {
             <p className="text-gray-400 text-xs">Trading</p>
           </div>
         </div>
+      </div>
+
+      {/* 🔥 REAL-TIME PRICE TICKER */}
+      <div className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border border-cyan-500/30 rounded-xl p-4 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-cyan-400 font-bold text-sm flex items-center gap-2">
+            📡 Live Market Data
+            {priceLoading && <span className="animate-spin text-xs">⏳</span>}
+          </h3>
+          <div className="flex items-center gap-2">
+            {lastUpdated && <span className="text-gray-500 text-xs">Updated: {lastUpdated}</span>}
+            <button onClick={fetchPrices} className="text-cyan-400 hover:text-cyan-300 text-xs border border-cyan-500/30 px-2 py-1 rounded">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-black/30 rounded-lg p-3">
+            <p className="text-gray-400 text-xs mb-1">ETH/USD</p>
+            <p className="text-white font-bold text-xl">
+              {ethPrice ? `$${ethPrice.eth_usd.toLocaleString()}` : '...'}
+            </p>
+            <p className="text-gray-500 text-xs">
+              {ethPrice ? `Rp ${(ethPrice.eth_idr / 1_000_000).toFixed(1)}M` : ''}
+            </p>
+          </div>
+          <div className="bg-black/30 rounded-lg p-3">
+            <p className="text-gray-400 text-xs mb-1">Base Gas</p>
+            <p className="text-cyan-400 font-bold text-xl">
+              {gasPrice ? `${gasPrice.gasPriceGwei} Gwei` : '...'}
+            </p>
+            <p className="text-gray-500 text-xs">⛽ Base Network</p>
+          </div>
+          <div className="bg-black/30 rounded-lg p-3">
+            <p className="text-gray-400 text-xs mb-1">$PREMALTA</p>
+            <p className={`font-bold text-xl ${premaltaPrice?.has_liquidity ? 'text-green-400' : 'text-amber-400'}`}>
+              {premaltaPrice?.has_liquidity ? `$${premaltaPrice.price_usd.toFixed(6)}` : '⏳ No Pool'}
+            </p>
+            <p className="text-gray-500 text-xs">
+              {premaltaPrice?.has_liquidity 
+                ? `Vol: $${premaltaPrice.volume_24h?.toFixed(0)}` 
+                : 'Needs liquidity'}
+            </p>
+          </div>
+          <div className="bg-black/30 rounded-lg p-3">
+            <p className="text-gray-400 text-xs mb-1">Pool Status</p>
+            <p className={`font-bold text-lg ${premaltaPrice?.has_liquidity ? 'text-green-400' : 'text-red-400'}`}>
+              {premaltaPrice?.has_liquidity ? '✅ Active' : '❌ No Pool'}
+            </p>
+            <p className="text-gray-500 text-xs">
+              {premaltaPrice?.has_liquidity 
+                ? `Liq: $${premaltaPrice.liquidity_usd?.toFixed(0)}`
+                : 'Needs $300-500 USDC'}
+            </p>
+          </div>
+        </div>
+        {!premaltaPrice?.has_liquidity && (
+          <div className="mt-3 bg-amber-900/20 border border-amber-500/30 rounded-lg p-2 flex items-center gap-2">
+            <span className="text-amber-400">⚠️</span>
+            <p className="text-amber-300 text-xs">
+              $PREMALTA sudah deployed di Base tapi belum ada liquidity pool. 
+              <a href="https://app.uniswap.org/#/add/ETH/0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7/3000?chain=base" 
+                 target="_blank" rel="noopener noreferrer"
+                 className="text-cyan-400 underline ml-1">Buat pool di Uniswap V3 Base →</a>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Key Stats */}

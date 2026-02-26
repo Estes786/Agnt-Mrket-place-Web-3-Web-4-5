@@ -1,35 +1,50 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { BLUEPRINTS } from './constants';
 import { DeployedEcosystem, Blueprint, UserStats } from './types';
+
+// 🚀 EAGER LOAD: Components used immediately on first paint
 import Marketplace from './components/Marketplace';
 import Dashboard from './components/Dashboard';
-import ArchitectMode from './components/ArchitectMode';
-import MediaLab from './components/MediaLab';
-import Roadmap from './components/Roadmap';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
-import GaniAssistant from './components/GaniAssistant';
-import Web3Panel from './components/Web3Panel';
-import Tokenomics from './components/Tokenomics';
-import DAppsHub from './components/DAppsHub';
-import DAOGovernance from './components/DAOGovernance';
-import Web3Identity from './components/Web3Identity';
-import PremaltaDashboard from './components/PremaltaDashboard';
-import StrategyCenter from './components/StrategyCenter';
-import AIWeb5Roadmap from './components/AIWeb5Roadmap';
-import RevenueHub from './components/RevenueHub';
-import TokenLaunchPad from './components/TokenLaunchPad';
-import AutonomousEconomy from './components/AutonomousEconomy';
-import Web5Command from './components/Web5Command';
-import MasterControl from './components/MasterControl';
-import SupabaseDashboard from './components/SupabaseDashboard';
-import BuildInPublic from './components/BuildInPublic';
-import SCA from './components/SCA';
-import SICA from './components/SICA';
-import SHGA from './components/SHGA';
+
+// ⚡ LAZY LOAD: Heavy components loaded on demand
+const ArchitectMode = lazy(() => import('./components/ArchitectMode'));
+const MediaLab = lazy(() => import('./components/MediaLab'));
+const Roadmap = lazy(() => import('./components/Roadmap'));
+const GaniAssistant = lazy(() => import('./components/GaniAssistant'));
+const Web3Panel = lazy(() => import('./components/Web3Panel'));
+const Tokenomics = lazy(() => import('./components/Tokenomics'));
+const DAppsHub = lazy(() => import('./components/DAppsHub'));
+const DAOGovernance = lazy(() => import('./components/DAOGovernance'));
+const Web3Identity = lazy(() => import('./components/Web3Identity'));
+const PremaltaDashboard = lazy(() => import('./components/PremaltaDashboard'));
+const StrategyCenter = lazy(() => import('./components/StrategyCenter'));
+const AIWeb5Roadmap = lazy(() => import('./components/AIWeb5Roadmap'));
+const RevenueHub = lazy(() => import('./components/RevenueHub'));
+const TokenLaunchPad = lazy(() => import('./components/TokenLaunchPad'));
+const AutonomousEconomy = lazy(() => import('./components/AutonomousEconomy'));
+const Web5Command = lazy(() => import('./components/Web5Command'));
+const MasterControl = lazy(() => import('./components/MasterControl'));
+const SupabaseDashboard = lazy(() => import('./components/SupabaseDashboard'));
+const BuildInPublic = lazy(() => import('./components/BuildInPublic'));
+const SCA = lazy(() => import('./components/SCA'));
+const SICA = lazy(() => import('./components/SICA'));
+const SHGA = lazy(() => import('./components/SHGA'));
+
+// Loading fallback component
+const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
+  <div className="flex items-center justify-center h-64 text-gray-500">
+    <div className="text-center">
+      <div className="animate-spin text-4xl mb-3">⚙️</div>
+      <p className="text-sm">Loading {name || 'module'}...</p>
+      <p className="text-xs text-gray-600 mt-1">Gyss! 🙏🏻</p>
+    </div>
+  </div>
+);
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -322,6 +337,7 @@ const App: React.FC = () => {
         />
 
         <main className="flex-1 overflow-y-auto scrollbar-hide pb-24 lg:pb-8 custom-scrollbar">
+          <Suspense fallback={<LoadingSpinner name="page" />}>
           <Routes>
             <Route path="/" element={
               <Marketplace
@@ -392,10 +408,13 @@ const App: React.FC = () => {
             <Route path="/sica" element={<SICA />} />
             <Route path="/shga" element={<SHGA />} />
           </Routes>
+          </Suspense>
         </main>
 
         <BottomNav activePodsCount={deployedEcosystems.length} />
-        <GaniAssistant isOpen={isGaniOpen} setIsOpen={setIsGaniOpen} />
+        <Suspense fallback={null}>
+          <GaniAssistant isOpen={isGaniOpen} setIsOpen={setIsGaniOpen} />
+        </Suspense>
       </div>
     </div>
   );
