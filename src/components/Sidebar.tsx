@@ -29,6 +29,8 @@ const navItems = [
   { path: '/sca/app', icon: '⚖️', label: 'Contract Analyst', sub: 'AI Legal · Revenue Engine', group: 'income' },
   { path: '/sica', icon: '🌙', label: 'SICA Katering', sub: 'AI Iftar & Catering Agent', group: 'income' },
   { path: '/shga', icon: '🎁', label: 'SHGA Hamper', sub: 'AI Gift & Hamper Agent', group: 'income' },
+  { path: '/sovereign-barber', icon: '💈', label: 'Sovereign Barber', sub: 'AI Barbershop · Community Node', group: 'income' },
+  { path: '/sovereign-legacy', icon: '🏛️', label: 'Sovereign Legacy', sub: 'Family Vault · Home OS · DID', group: 'income' },
   { path: '/economy', icon: '🌐', label: 'Autonomous Economy', sub: 'Web2→Web5 Engine', group: 'income' },
   { path: '/revenue', icon: '💰', label: 'Revenue Hub', sub: 'SaaS · Micro Services', group: 'income' },
   { path: '/tokens', icon: '🚀', label: 'Token LaunchPad', sub: 'Deploy · Liquidity', group: 'income' },

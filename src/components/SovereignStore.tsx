@@ -267,6 +267,58 @@ const AGENTS: Agent[] = [
       { id: 'sma-pro', name: 'SMA Pro Bundle', price: 799000, period: 'bulan', highlighted: true, features: ['3 agents pilihan', 'Full analytics', 'API access', 'Priority support'] },
       { id: 'sma-enterprise', name: 'SMA Enterprise', price: 1999000, period: 'bulan', features: ['Semua agents', 'White-label', 'Custom agents', 'Dedicated support'] }
     ]
+  },
+  {
+    id: 'sovereign-barber',
+    name: 'Sovereign Barber Agent',
+    shortName: 'SB',
+    tagline: '"The Community Node" — AI Barbershop Management',
+    description: 'Ubah barbershop Anda menjadi "Community Node" digital. AI-powered booking, Style Vault untuk klien, inventori otomatis, dan $HYPHA loyalty rewards. Solusi lengkap untuk barbershop modern.',
+    icon: '💈',
+    color: 'amber',
+    bgGradient: 'from-amber-700 to-yellow-800',
+    route: '/sovereign-barber',
+    status: 'live',
+    category: 'Barbershop Management',
+    badge: '🔥 NEW',
+    usedBy: 'Barbershop owners, grooming studios',
+    features: ['AI Style Advisor (Groq)', 'Style Vault per klien (IPFS)', 'Smart Booking & Queue', 'Inventori auto-restock', '$HYPHA Loyalty Rewards', 'NFT Loyalty Badges', 'WhatsApp Integration', 'Revenue Analytics'],
+    stats: [
+      { label: 'Avg Revenue Boost', value: '+40%' },
+      { label: 'Time Saved', value: '3 jam/hari' },
+      { label: 'Klien Retention', value: '+65%' }
+    ],
+    plans: [
+      { id: 'sb-starter', name: 'Starter Chair', price: 299000, period: 'bulan', features: ['50 booking/bulan', 'Style Vault 5 klien', 'AI Style Advisor 20x', 'Inventori tracking'] },
+      { id: 'sb-pro', name: 'Sovereign Node', price: 799000, period: 'bulan', highlighted: true, features: ['Booking UNLIMITED', 'Style Vault UNLIMITED', 'AI Unlimited', '$HYPHA rewards', 'WhatsApp auto-reply'] },
+      { id: 'sb-empire', name: 'Dynasty Empire', price: 1999000, period: 'bulan', features: ['Multi-barber & multi-cabang', 'Custom NFT badges', 'GANI Store integration', 'Analytics BI dashboard'] }
+    ]
+  },
+  {
+    id: 'sovereign-legacy',
+    name: 'Sovereign Legacy Agent',
+    shortName: 'SL',
+    tagline: '"The Family Sanctuary" — Digital Legacy Vault + Home OS',
+    description: 'Amankan warisan keluarga Anda secara digital. Legacy Vault terenkripsi AES-256 di IPFS, Web5 DID untuk identitas sovereign, Family Treasury dashboard, Home OS AI, dan Succession Protocol otomatis.',
+    icon: '🏛️',
+    color: 'violet',
+    bgGradient: 'from-violet-800 to-purple-900',
+    route: '/sovereign-legacy',
+    status: 'live',
+    category: 'Family Legacy & Home OS',
+    badge: '🔥 NEW',
+    usedBy: 'Keluarga, kepala rumah tangga, profesional',
+    features: ['Legacy Vault (IPFS + AES-256)', 'Web5 DID + DWN Identity', 'Family Treasury Dashboard', 'Home OS AI Planner', 'Succession Protocol', 'Dead Man\'s Switch', '$HYPHA Family Staking', 'Multi-sig Wallet'],
+    stats: [
+      { label: 'Dokumen Aman', value: '100%' },
+      { label: 'Keamanan Data', value: 'Web5 Grade' },
+      { label: 'Succession Speed', value: 'Otomatis' }
+    ],
+    plans: [
+      { id: 'sl-starter', name: 'Sanctuary Starter', price: 299000, period: 'bulan', features: ['10 dokumen vault', 'IPFS 100MB', 'AES-256 enkripsi', 'Home OS 20 tugas'] },
+      { id: 'sl-pro', name: 'Sovereign Sanctuary', price: 799000, period: 'bulan', highlighted: true, features: ['Vault UNLIMITED', 'Web5 DID + DWN', 'Family Treasury', 'Succession rules', '$HYPHA staking'] },
+      { id: 'sl-forever', name: 'Legacy Forever', price: 1999000, period: 'bulan', features: ['IPFS UNLIMITED', 'Smart contract suksesi', 'ZKP Security', 'Multi-sig wallet', 'IoT Home bridge'] }
+    ]
   }
 ];
 

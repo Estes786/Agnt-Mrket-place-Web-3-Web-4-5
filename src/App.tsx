@@ -36,6 +36,8 @@ const SICA = lazy(() => import('./components/SICA'));
 const SHGA = lazy(() => import('./components/SHGA'));
 const SCALanding = lazy(() => import('./components/SCALanding'));
 const SovereignStore = lazy(() => import('./components/SovereignStore'));
+const SovereignBarber = lazy(() => import('./components/SovereignBarber'));
+const SovereignLegacy = lazy(() => import('./components/SovereignLegacy'));
 
 // Loading fallback component
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
@@ -439,6 +441,8 @@ const App: React.FC = () => {
             <Route path="/sica" element={<SICA />} />
             <Route path="/shga" element={<SHGA />} />
             <Route path="/store" element={<SovereignStore />} />
+            <Route path="/sovereign-barber" element={<SovereignBarber />} />
+            <Route path="/sovereign-legacy" element={<SovereignLegacy />} />
           </Routes>
           </Suspense>
         </main>
