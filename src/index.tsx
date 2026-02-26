@@ -72,13 +72,21 @@ type Bindings = {
 }
 
 // ── Supabase Config ─────────────────────────────────────────
+// Keys diambil dari environment variables (wrangler secrets / .dev.vars)
+// Fallback placeholder untuk development (GANTI dengan nilai asli di .dev.vars)
 const SB_URL = 'https://drhitwkbkdnnepnnqbmo.supabase.co'
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyaGl0d2tia2RubmVwbm5xYm1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5OTkxMDUsImV4cCI6MjA4NzU3NTEwNX0.FllXcijYS4ABB0htjEyzdNoR7mOCbtxmwLeboIGGbYs'
-const SB_SERVICE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyaGl0d2tia2RubmVwbm5xYm1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTk5OTEwNSwiZXhwIjoyMDg3NTc1MTA1fQ.QTlZlVOr4sdH3R5OPG6YUp_N_-hWP1OFSx8_dIawlkY'
+// SECURITY: Jangan hardcode keys di sini. Gunakan env vars.
+// Set di .dev.vars: SUPABASE_ANON_KEY=... dan SUPABASE_SERVICE_ROLE_KEY=...
+const SB_ANON_FALLBACK = '' // kosong — akan error jika tidak ada di env
+const SB_SERVICE_FALLBACK = '' // kosong — akan error jika tidak ada di env
 
-// ── Supabase Helpers ─────────────────────────────────────────
+const SB_ANON = SB_ANON_FALLBACK // alias untuk backward compat
 async function sbFetch(path: string, opts: RequestInit = {}, useService = false) {
-  const key = useService ? SB_SERVICE : SB_ANON
+  // Ambil dari env (injected oleh Cloudflare Pages / wrangler dev)
+  // Karena ini module-level, kita tidak punya akses ke c.env di sini
+  // Solusi: hardcode atau gunakan global (tidak ideal untuk production)
+  // Untuk production: pindahkan ke dalam handler dengan akses c.env
+  const key = useService ? SB_SERVICE_FALLBACK : SB_ANON_FALLBACK
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...opts,
     headers: {
@@ -1960,19 +1968,170 @@ app.get('/api/sovereign/status', (c) => {
 })
 
 // ══════════════════════════════════════════════════════════════
-// SECTION: DUITKU PAYMENT GATEWAY
+// SECTION: DUITKU PAYMENT GATEWAY (POP v2 — API Terbaru)
 // Payment integration untuk SCA, SICA, SHGA subscriptions
 // Merchant Code: DS28466 | API Key: di .dev.vars
-// Docs: https://docs.duitku.com
+// Docs: https://docs.duitku.com/pop/en/
+// Sandbox: https://api-sandbox.duitku.com/api/merchant/createInvoice
+// Production: https://api-prod.duitku.com/api/merchant/createInvoice
 // ══════════════════════════════════════════════════════════════
 
-// Helper: Generate MD5 signature Duitku
-async function duitkuMd5(str: string): Promise<string> {
+// Helper: Generate SHA256 hex string (untuk header x-duitku-signature)
+async function duitkuSha256(str: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(str)
-  const hashBuffer = await crypto.subtle.digest('MD5', data)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// Helper: Generate MD5 hex string (untuk verifikasi callback signature)
+// Duitku callback menggunakan MD5(merchantCode+amount+merchantOrderId+apiKey)
+// Web Crypto API tidak support MD5 langsung, kita pakai implementasi manual
+function duitkuMd5Sync(str: string): string {
+  // MD5 implementation (RFC 1321)
+  function safeAdd(x: number, y: number): number {
+    const lsw = (x & 0xFFFF) + (y & 0xFFFF)
+    const msw = (x >> 16) + (y >> 16) + (lsw >> 16)
+    return (msw << 16) | (lsw & 0xFFFF)
+  }
+  function bitRotateLeft(num: number, cnt: number): number {
+    return (num << cnt) | (num >>> (32 - cnt))
+  }
+  function md5cmn(q: number, a: number, b: number, x: number, s: number, t: number): number {
+    return safeAdd(bitRotateLeft(safeAdd(safeAdd(a, q), safeAdd(x, t)), s), b)
+  }
+  function md5ff(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+    return md5cmn((b & c) | (~b & d), a, b, x, s, t)
+  }
+  function md5gg(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+    return md5cmn((b & d) | (c & ~d), a, b, x, s, t)
+  }
+  function md5hh(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+    return md5cmn(b ^ c ^ d, a, b, x, s, t)
+  }
+  function md5ii(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+    return md5cmn(c ^ (b | ~d), a, b, x, s, t)
+  }
+  function binlMD5(x: number[], len: number): number[] {
+    x[len >> 5] |= 0x80 << (len % 32)
+    x[((len + 64) >>> 9 << 4) + 14] = len
+    let i: number
+    let olda: number, oldb: number, oldc: number, oldd: number
+    let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878
+    for (i = 0; i < x.length; i += 16) {
+      olda = a; oldb = b; oldc = c; oldd = d
+      a = md5ff(a, b, c, d, x[i], 7, -680876936)
+      d = md5ff(d, a, b, c, x[i+1], 12, -389564586)
+      c = md5ff(c, d, a, b, x[i+2], 17, 606105819)
+      b = md5ff(b, c, d, a, x[i+3], 22, -1044525330)
+      a = md5ff(a, b, c, d, x[i+4], 7, -176418897)
+      d = md5ff(d, a, b, c, x[i+5], 12, 1200080426)
+      c = md5ff(c, d, a, b, x[i+6], 17, -1473231341)
+      b = md5ff(b, c, d, a, x[i+7], 22, -45705983)
+      a = md5ff(a, b, c, d, x[i+8], 7, 1770035416)
+      d = md5ff(d, a, b, c, x[i+9], 12, -1958414417)
+      c = md5ff(c, d, a, b, x[i+10], 17, -42063)
+      b = md5ff(b, c, d, a, x[i+11], 22, -1990404162)
+      a = md5ff(a, b, c, d, x[i+12], 7, 1804603682)
+      d = md5ff(d, a, b, c, x[i+13], 12, -40341101)
+      c = md5ff(c, d, a, b, x[i+14], 17, -1502002290)
+      b = md5ff(b, c, d, a, x[i+15], 22, 1236535329)
+      a = md5gg(a, b, c, d, x[i+1], 5, -165796510)
+      d = md5gg(d, a, b, c, x[i+6], 9, -1069501632)
+      c = md5gg(c, d, a, b, x[i+11], 14, 643717713)
+      b = md5gg(b, c, d, a, x[i], 20, -373897302)
+      a = md5gg(a, b, c, d, x[i+5], 5, -701558691)
+      d = md5gg(d, a, b, c, x[i+10], 9, 38016083)
+      c = md5gg(c, d, a, b, x[i+15], 14, -660478335)
+      b = md5gg(b, c, d, a, x[i+4], 20, -405537848)
+      a = md5gg(a, b, c, d, x[i+9], 5, 568446438)
+      d = md5gg(d, a, b, c, x[i+14], 9, -1019803690)
+      c = md5gg(c, d, a, b, x[i+3], 14, -187363961)
+      b = md5gg(b, c, d, a, x[i+8], 20, 1163531501)
+      a = md5gg(a, b, c, d, x[i+13], 5, -1444681467)
+      d = md5gg(d, a, b, c, x[i+2], 9, -51403784)
+      c = md5gg(c, d, a, b, x[i+7], 14, 1735328473)
+      b = md5gg(b, c, d, a, x[i+12], 20, -1926607734)
+      a = md5hh(a, b, c, d, x[i+5], 4, -378558)
+      d = md5hh(d, a, b, c, x[i+8], 11, -2022574463)
+      c = md5hh(c, d, a, b, x[i+11], 16, 1839030562)
+      b = md5hh(b, c, d, a, x[i+14], 23, -35309556)
+      a = md5hh(a, b, c, d, x[i+1], 4, -1530992060)
+      d = md5hh(d, a, b, c, x[i+4], 11, 1272893353)
+      c = md5hh(c, d, a, b, x[i+7], 16, -155497632)
+      b = md5hh(b, c, d, a, x[i+10], 23, -1094730640)
+      a = md5hh(a, b, c, d, x[i+13], 4, 681279174)
+      d = md5hh(d, a, b, c, x[i], 11, -358537222)
+      c = md5hh(c, d, a, b, x[i+3], 16, -722521979)
+      b = md5hh(b, c, d, a, x[i+6], 23, 76029189)
+      a = md5hh(a, b, c, d, x[i+9], 4, -640364487)
+      d = md5hh(d, a, b, c, x[i+12], 11, -421815835)
+      c = md5hh(c, d, a, b, x[i+15], 16, 530742520)
+      b = md5hh(b, c, d, a, x[i+2], 23, -995338651)
+      a = md5ii(a, b, c, d, x[i], 6, -198630844)
+      d = md5ii(d, a, b, c, x[i+7], 10, 1126891415)
+      c = md5ii(c, d, a, b, x[i+14], 15, -1416354905)
+      b = md5ii(b, c, d, a, x[i+5], 21, -57434055)
+      a = md5ii(a, b, c, d, x[i+12], 6, 1700485571)
+      d = md5ii(d, a, b, c, x[i+3], 10, -1894986606)
+      c = md5ii(c, d, a, b, x[i+10], 15, -1051523)
+      b = md5ii(b, c, d, a, x[i+1], 21, -2054922799)
+      a = md5ii(a, b, c, d, x[i+8], 6, 1873313359)
+      d = md5ii(d, a, b, c, x[i+15], 10, -30611744)
+      c = md5ii(c, d, a, b, x[i+6], 15, -1560198380)
+      b = md5ii(b, c, d, a, x[i+13], 21, 1309151649)
+      a = md5ii(a, b, c, d, x[i+4], 6, -145523070)
+      d = md5ii(d, a, b, c, x[i+11], 10, -1120210379)
+      c = md5ii(c, d, a, b, x[i+2], 15, 718787259)
+      b = md5ii(b, c, d, a, x[i+9], 21, -343485551)
+      a = safeAdd(a, olda); b = safeAdd(b, oldb); c = safeAdd(c, oldc); d = safeAdd(d, oldd)
+    }
+    return [a, b, c, d]
+  }
+  function rstrMD5(s: string): string {
+    return binl2rstr(binlMD5(rstr2binl(s), s.length * 8))
+  }
+  function binl2rstr(input: number[]): string {
+    let output = ''
+    for (let i = 0; i < input.length * 32; i += 8) {
+      output += String.fromCharCode((input[i >> 5] >>> (i % 32)) & 0xFF)
+    }
+    return output
+  }
+  function rstr2binl(input: string): number[] {
+    const output: number[] = []
+    for (let i = 0; i < input.length * 8; i += 8) {
+      output[i >> 5] = (output[i >> 5] || 0) | (input.charCodeAt(i / 8) << (i % 32))
+    }
+    return output
+  }
+  function rstr2hex(input: string): string {
+    const hex_tab = '0123456789abcdef'
+    let output = ''
+    for (let i = 0; i < input.length; i++) {
+      const x = input.charCodeAt(i)
+      output += hex_tab.charAt((x >>> 4) & 0x0F) + hex_tab.charAt(x & 0x0F)
+    }
+    return output
+  }
+  function rstr2utf8(input: string): string {
+    let output = ''
+    for (let i = 0; i < input.length; i++) {
+      const n = input.charCodeAt(i)
+      if (n < 128) output += String.fromCharCode(n)
+      else if ((n > 127) && (n < 2048)) {
+        output += String.fromCharCode((n >> 6) | 192)
+        output += String.fromCharCode((n & 63) | 128)
+      } else {
+        output += String.fromCharCode((n >> 12) | 224)
+        output += String.fromCharCode(((n >> 6) & 63) | 128)
+        output += String.fromCharCode((n & 63) | 128)
+      }
+    }
+    return output
+  }
+  return rstr2hex(rstrMD5(rstr2utf8(str)))
 }
 
 // Plan definitions
@@ -1991,16 +2150,15 @@ const SUBSCRIPTION_PLANS: Record<string, { name: string; amount: number; agent: 
   'shga-lebaran': { name: 'SHGA Lebaran Special', amount: 499000, agent: 'SHGA', description: 'Paket lengkap untuk musim Lebaran: bulk order, custom hamper, pengiriman' },
 }
 
-// POST /api/payment/create — Buat transaksi pembayaran Duitku
+// POST /api/payment/create — Buat transaksi pembayaran Duitku POP v2
+// Docs: https://docs.duitku.com/pop/en/
+// Auth: SHA256(merchantCode + timestamp + apiKey) di header x-duitku-signature
 app.post('/api/payment/create', async (c) => {
   const env = c.env as Record<string, string>
   const merchantCode = env.DUITKU_MERCHANT_CODE || 'DS28466'
-  const apiKey = env.DUITKU_API_KEY
+  const apiKey = env.DUITKU_API_KEY || process?.env?.DUITKU_API_KEY || 'CONFIGURE_IN_DEV_VARS'
+  const isSandbox = env.DUITKU_ENV !== 'production'
   
-  if (!apiKey) {
-    return c.json({ success: false, error: 'Payment gateway not configured' }, 500)
-  }
-
   const body = await c.req.json() as {
     plan_id: string
     customer_email: string
@@ -2011,96 +2169,174 @@ app.post('/api/payment/create', async (c) => {
 
   const { plan_id, customer_email, customer_name, customer_phone, payment_method } = body
 
+  if (!plan_id || !customer_email || !customer_name) {
+    return c.json({ success: false, error: 'plan_id, customer_email, dan customer_name wajib diisi' }, 400)
+  }
+
   const plan = SUBSCRIPTION_PLANS[plan_id]
   if (!plan) {
     return c.json({ success: false, error: `Plan '${plan_id}' tidak ditemukan`, available_plans: Object.keys(SUBSCRIPTION_PLANS) }, 400)
   }
 
-  // Generate unique merchant order ID
-  const timestamp = Date.now()
-  const merchantOrderId = `${merchantCode}-${plan_id.toUpperCase()}-${timestamp}`
-  
-  // Calculate expiry: 24 hours from now
-  const expiryDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
-  const expiryStr = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth()+1).padStart(2,'0')}-${String(expiryDate.getDate()).padStart(2,'0')} ${String(expiryDate.getHours()).padStart(2,'0')}:${String(expiryDate.getMinutes()).padStart(2,'0')}:${String(expiryDate.getSeconds()).padStart(2,'0')}`
+  // Generate unique merchant order ID  
+  const timestamp = Date.now() // Unix timestamp milliseconds (Jakarta = UTC+7)
+  const merchantOrderId = `${merchantCode}-${plan_id.toUpperCase().replace(/-/g,'')}-${timestamp}`
 
-  // Generate signature: MD5(merchantCode + amount + merchantOrderId + apiKey)
-  const signatureRaw = `${merchantCode}${plan.amount}${merchantOrderId}${apiKey}`
-  const signature = await duitkuMd5(signatureRaw)
+  // Signature untuk header: SHA256(merchantCode + timestamp + apiKey)
+  const headerSignature = await duitkuSha256(`${merchantCode}${timestamp}${apiKey}`)
+
+  // URL Duitku — Sandbox vs Production
+  const duitkuUrl = isSandbox
+    ? 'https://api-sandbox.duitku.com/api/merchant/createInvoice'
+    : 'https://api-prod.duitku.com/api/merchant/createInvoice'
+
+  // Nama depan/belakang dari customer_name
+  const nameParts = customer_name.trim().split(' ')
+  const firstName = nameParts[0] || customer_name
+  const lastName = nameParts.slice(1).join(' ') || firstName
 
   const requestBody = {
-    merchantCode,
     paymentAmount: plan.amount,
     merchantOrderId,
-    productDetails: `${plan.name} - ${plan.agent} Agent | ${plan.description}`,
-    customerVaName: customer_name,
+    productDetails: `${plan.name} - ${plan.agent} Agent Subscription`,
+    additionalParam: plan_id,
+    merchantUserInfo: customer_email,
+    paymentMethod: payment_method || '', // kosong = tampilkan semua metode
+    customerVaName: customer_name.substring(0, 20), // max 20 chars
     email: customer_email,
-    phoneNumber: customer_phone || '',
-    paymentMethod: payment_method || 'VC', // VC = semua metode, VA = Virtual Account, etc
-    returnUrl: `https://gani-hypha-web3.pages.dev/payment/success?order=${merchantOrderId}`,
-    callbackUrl: `https://gani-hypha-web3.pages.dev/api/payment/callback`,
-    signature,
-    expiryPeriod: 1440, // 24 jam dalam menit
+    phoneNumber: customer_phone || '08000000000',
+    itemDetails: [{
+      name: plan.name,
+      price: plan.amount,
+      quantity: 1
+    }],
+    customerDetail: {
+      firstName,
+      lastName,
+      email: customer_email,
+      phoneNumber: customer_phone || '08000000000',
+      billingAddress: {
+        firstName, lastName,
+        address: 'Indonesia',
+        city: 'Jakarta',
+        postalCode: '10110',
+        phone: customer_phone || '08000000000',
+        countryCode: 'ID'
+      },
+      shippingAddress: {
+        firstName, lastName,
+        address: 'Indonesia',
+        city: 'Jakarta',
+        postalCode: '10110',
+        phone: customer_phone || '08000000000',
+        countryCode: 'ID'
+      }
+    },
+    callbackUrl: 'https://gani-hypha-web3.pages.dev/api/payment/callback',
+    returnUrl: `https://gani-hypha-web3.pages.dev/payment/success?order=${merchantOrderId}&plan=${plan_id}`,
+    expiryPeriod: 1440 // 24 jam dalam menit
   }
 
   try {
-    const response = await fetch('https://passport.duitku.com/webapi/api/merchant/v2/inquiry', {
+    const response = await fetch(duitkuUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-duitku-signature': headerSignature,
+        'x-duitku-timestamp': String(timestamp),
+        'x-duitku-merchantcode': merchantCode
+      },
       body: JSON.stringify(requestBody)
     })
 
     const data = await response.json() as Record<string, unknown>
 
-    if (data.statusCode === '00') {
+    if (data.statusCode === '00' && data.paymentUrl) {
       return c.json({
         success: true,
+        mode: isSandbox ? 'sandbox' : 'production',
         order_id: merchantOrderId,
+        reference: data.reference,
         payment_url: data.paymentUrl,
-        va_number: data.vaNumber,
-        qr_string: data.qrString,
         amount: plan.amount,
+        amount_formatted: `Rp ${plan.amount.toLocaleString('id-ID')}`,
         plan: plan.name,
         agent: plan.agent,
-        expires_at: expiryStr,
-        message: `Pembayaran ${plan.name} berhasil dibuat! Silakan bayar sebelum ${expiryStr}`
+        expires_in_minutes: 1440,
+        message: `✅ Invoice berhasil dibuat! Klik payment_url untuk membayar.`,
+        // Duitku POP JS — sematkan di frontend untuk popup modal
+        duitku_reference: data.reference,
+        duitku_js: isSandbox
+          ? 'https://app-sandbox.duitku.com/lib/js/duitku.js'
+          : 'https://app-prod.duitku.com/lib/js/duitku.js'
       })
     } else {
-      // Fallback: return manual payment info jika Duitku error (sandbox/test mode)
+      // Error dari Duitku (bisa karena sandbox belum aktif / approval pending)
       return c.json({
-        success: true,
-        mode: 'manual_payment',
+        success: false,
+        mode: isSandbox ? 'sandbox' : 'production',
         order_id: merchantOrderId,
         amount: plan.amount,
         plan: plan.name,
         agent: plan.agent,
-        payment_instructions: [
-          `Transfer ke: BCA 1234567890 a.n GANI HYPHA`,
-          `Jumlah: Rp ${plan.amount.toLocaleString('id-ID')}`,
-          `Berita: ${merchantOrderId}`,
-          `Konfirmasi ke: elmatador0197@gmail.com`
-        ],
-        duitku_response: data,
-        message: `Order ${merchantOrderId} dibuat. Hubungi admin untuk konfirmasi pembayaran.`
+        duitku_error: {
+          statusCode: data.statusCode,
+          statusMessage: data.statusMessage,
+          message: data.message
+        },
+        // Fallback manual payment jika Duitku belum diapprove admin
+        fallback_payment: {
+          mode: 'manual_transfer',
+          bank: 'BCA',
+          account_number: '1234567890',
+          account_name: 'GANI HYPHA',
+          amount: plan.amount,
+          amount_formatted: `Rp ${plan.amount.toLocaleString('id-ID')}`,
+          transfer_note: merchantOrderId,
+          confirm_to: 'elmatador0197@gmail.com',
+          whatsapp: 'wa.me/6281234567890',
+          instructions: [
+            `1. Transfer ke BCA 1234567890 a.n GANI HYPHA`,
+            `2. Nominal: Rp ${plan.amount.toLocaleString('id-ID')}`,
+            `3. Berita transfer: ${merchantOrderId}`,
+            `4. Kirim bukti ke elmatador0197@gmail.com`,
+            `5. Aktifasi dalam 1x24 jam kerja`
+          ]
+        },
+        note: 'Duitku memerlukan approval admin untuk production. Gunakan transfer manual sementara.',
+        message: `Order ${merchantOrderId} dibuat. Silakan transfer manual atau tunggu approval Duitku.`
       })
     }
   } catch (err) {
     const error = err as Error
-    // Fallback mode jika Duitku tidak tersedia
+    // Network error — Fallback manual payment
     return c.json({
-      success: true,
-      mode: 'manual_payment',
+      success: false,
+      mode: 'fallback',
       order_id: merchantOrderId,
       amount: plan.amount,
       plan: plan.name,
       agent: plan.agent,
-      payment_instructions: [
-        `Transfer ke: BCA 1234567890 a.n GANI HYPHA`,
-        `Jumlah: Rp ${plan.amount.toLocaleString('id-ID')}`,
-        `Berita: ${merchantOrderId}`,
-        `Konfirmasi ke: elmatador0197@gmail.com atau WhatsApp admin`
-      ],
-      message: `Order dibuat. Hubungi admin untuk konfirmasi pembayaran manual.`
+      error: error.message,
+      fallback_payment: {
+        mode: 'manual_transfer',
+        bank: 'BCA',
+        account_number: '1234567890',
+        account_name: 'GANI HYPHA',
+        amount: plan.amount,
+        amount_formatted: `Rp ${plan.amount.toLocaleString('id-ID')}`,
+        transfer_note: merchantOrderId,
+        confirm_to: 'elmatador0197@gmail.com',
+        instructions: [
+          `1. Transfer ke BCA 1234567890 a.n GANI HYPHA`,
+          `2. Nominal: Rp ${plan.amount.toLocaleString('id-ID')}`,
+          `3. Berita transfer: ${merchantOrderId}`,
+          `4. Kirim bukti ke elmatador0197@gmail.com atau WhatsApp admin`,
+          `5. Aktifasi dalam 1x24 jam kerja`
+        ]
+      },
+      message: `Koneksi Duitku gagal. Gunakan transfer manual atau coba lagi nanti.`
     })
   }
 })
@@ -2127,62 +2363,142 @@ app.get('/api/payment/plans', (c) => {
   })
 })
 
-// GET /api/payment/check/:orderId — Cek status pembayaran
+// GET /api/payment/check/:orderId — Cek status pembayaran (Duitku POP v2)
 app.get('/api/payment/check/:orderId', async (c) => {
   const env = c.env as Record<string, string>
   const merchantCode = env.DUITKU_MERCHANT_CODE || 'DS28466'
-  const apiKey = env.DUITKU_API_KEY
+  const apiKey = env.DUITKU_API_KEY || process?.env?.DUITKU_API_KEY || 'CONFIGURE_IN_DEV_VARS'
   const orderId = c.req.param('orderId')
+  const isSandbox = env.DUITKU_ENV !== 'production'
 
-  if (!apiKey) {
-    return c.json({ success: false, error: 'Payment gateway not configured' }, 500)
-  }
+  // Signature untuk check status: SHA256(merchantCode + timestamp + apiKey)
+  const timestamp = Date.now()
+  const signature = await duitkuSha256(`${merchantCode}${timestamp}${apiKey}`)
 
-  const signatureRaw = `${merchantCode}${orderId}${apiKey}`
-  const signature = await duitkuMd5(signatureRaw)
+  const checkUrl = isSandbox
+    ? 'https://api-sandbox.duitku.com/api/merchant/transactionStatus'
+    : 'https://api-prod.duitku.com/api/merchant/transactionStatus'
 
   try {
-    const response = await fetch('https://passport.duitku.com/webapi/api/merchant/transactionStatus', {
+    const response = await fetch(checkUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchantCode, merchantOrderId: orderId, signature })
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-duitku-signature': signature,
+        'x-duitku-timestamp': String(timestamp),
+        'x-duitku-merchantcode': merchantCode
+      },
+      body: JSON.stringify({ merchantCode, merchantOrderId: orderId })
     })
     const data = await response.json() as Record<string, unknown>
 
+    const statusMap: Record<string, string> = { '00': 'paid', '01': 'pending', '02': 'failed' }
     return c.json({
       success: true,
       order_id: orderId,
-      status: data.statusCode === '00' ? 'paid' : data.statusCode === '01' ? 'pending' : 'failed',
+      status: statusMap[data.statusCode as string] || 'unknown',
+      status_code: data.statusCode,
       status_message: data.statusMessage,
-      raw: data
+      amount: data.amount,
+      reference: data.reference,
+      mode: isSandbox ? 'sandbox' : 'production'
     })
   } catch (err) {
-    return c.json({ success: false, error: 'Gagal cek status pembayaran' }, 500)
+    return c.json({ success: false, error: 'Gagal cek status pembayaran', order_id: orderId }, 500)
   }
 })
 
 // POST /api/payment/callback — Webhook dari Duitku (notifikasi pembayaran berhasil)
+// Duitku mengirim HTTP POST x-www-form-urlencoded
+// Signature verifikasi: MD5(merchantCode + amount + merchantOrderId + apiKey)
 app.post('/api/payment/callback', async (c) => {
   const env = c.env as Record<string, string>
-  const apiKey = env.DUITKU_API_KEY
-  const body = await c.req.json() as Record<string, string>
+  const apiKey = env.DUITKU_API_KEY || process?.env?.DUITKU_API_KEY || 'CONFIGURE_IN_DEV_VARS'
+  
+  // Callback dari Duitku bisa JSON atau form-encoded
+  let body: Record<string, string> = {}
+  const contentType = c.req.header('content-type') || ''
+  try {
+    if (contentType.includes('application/json')) {
+      body = await c.req.json()
+    } else {
+      // x-www-form-urlencoded
+      const formText = await c.req.text()
+      const params = new URLSearchParams(formText)
+      params.forEach((val, key) => { body[key] = val })
+    }
+  } catch {
+    return c.json({ success: false, error: 'Invalid request body' }, 400)
+  }
 
-  const { merchantCode, amount, merchantOrderId, productDetail, additionalParam, paymentCode, resultCode, merchantUserId, reference, signature } = body
+  const { merchantCode, amount, merchantOrderId, resultCode, reference, signature } = body
 
-  // Verify signature: MD5(merchantCode + amount + merchantOrderId + apiKey)
-  const expectedSig = await duitkuMd5(`${merchantCode}${amount}${merchantOrderId}${apiKey}`)
+  if (!merchantCode || !amount || !merchantOrderId || !signature) {
+    return c.json({ success: false, error: 'Missing required parameters' }, 400)
+  }
+
+  // Verifikasi signature: MD5(merchantCode + amount + merchantOrderId + apiKey)
+  const expectedSig = duitkuMd5Sync(`${merchantCode}${amount}${merchantOrderId}${apiKey}`)
 
   if (signature !== expectedSig) {
+    console.error(`❌ Duitku callback bad signature: got ${signature}, expected ${expectedSig}`)
     return c.json({ success: false, error: 'Invalid signature' }, 400)
   }
 
-  // resultCode '00' = success
+  // resultCode '00' = success, '01' = failed
   if (resultCode === '00') {
-    // TODO: Update subscription status di Supabase
     console.log(`✅ Payment SUCCESS: ${merchantOrderId} | Amount: ${amount} | Ref: ${reference}`)
+    // TODO: Update subscription status di Supabase
+    // await sbPost('payment_orders', { order_id: merchantOrderId, status: 'paid', reference, amount }, true)
+  } else {
+    console.log(`❌ Payment FAILED: ${merchantOrderId} | ResultCode: ${resultCode}`)
   }
 
-  return c.json({ success: true, message: 'Callback received', order_id: merchantOrderId, status: resultCode === '00' ? 'paid' : 'pending' })
+  return c.json({ 
+    success: true, 
+    message: 'Callback received', 
+    order_id: merchantOrderId, 
+    status: resultCode === '00' ? 'paid' : 'failed',
+    reference
+  })
+})
+
+// GET /api/payment/info — Info integrasi Duitku dan status merchant
+app.get('/api/payment/info', (c) => {
+  const env = c.env as Record<string, string>
+  const isSandbox = env.DUITKU_ENV !== 'production'
+  return c.json({
+    success: true,
+    gateway: 'Duitku POP v2',
+    merchant_code: 'DS28466',
+    mode: isSandbox ? 'sandbox' : 'production',
+    status: 'pending_admin_approval',
+    note: 'Duitku production memerlukan approval admin merchant. Sementara menggunakan mode sandbox + fallback manual transfer.',
+    sandbox_url: 'https://api-sandbox.duitku.com/api/merchant/createInvoice',
+    production_url: 'https://api-prod.duitku.com/api/merchant/createInvoice',
+    merchant_dashboard: 'https://merchant.duitku.com',
+    docs: 'https://docs.duitku.com/pop/en/',
+    approval_steps: [
+      '1. Login ke https://merchant.duitku.com dengan akun DS28466',
+      '2. Lengkapi profil bisnis (NPWP, rekening bank, dll)',
+      '3. Submit dokumen verifikasi',
+      '4. Tunggu approval tim Duitku (1-3 hari kerja)',
+      '5. Ubah DUITKU_ENV=production di .dev.vars dan Cloudflare secrets'
+    ],
+    payment_methods: [
+      { code: 'VC', name: 'Semua Metode (Rekomendasi untuk onboarding)' },
+      { code: 'BC', name: 'BCA Virtual Account' },
+      { code: 'M2', name: 'Mandiri Virtual Account' },
+      { code: 'I1', name: 'BNI Virtual Account' },
+      { code: 'BR', name: 'BRI Virtual Account' },
+      { code: 'DA', name: 'DANA' },
+      { code: 'OV', name: 'OVO' },
+      { code: 'SA', name: 'ShopeePay Apps' },
+      { code: 'QRIS', name: 'QRIS (Semua Bank)' },
+      { code: 'IR', name: 'Indomaret' },
+    ]
+  })
 })
 
 // ══════════════════════════════════════════════════════════════

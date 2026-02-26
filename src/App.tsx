@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { BLUEPRINTS } from './constants';
 import { DeployedEcosystem, Blueprint, UserStats } from './types';
 
@@ -34,6 +34,7 @@ const BuildInPublic = lazy(() => import('./components/BuildInPublic'));
 const SCA = lazy(() => import('./components/SCA'));
 const SICA = lazy(() => import('./components/SICA'));
 const SHGA = lazy(() => import('./components/SHGA'));
+const SCALanding = lazy(() => import('./components/SCALanding'));
 
 // Loading fallback component
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
@@ -48,6 +49,34 @@ const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
 
 const App: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Public routes yang tidak butuh app layout (sidebar, header, dll)
+  const isPublicPage = location.pathname === '/sca' || location.pathname.startsWith('/sca-landing') || location.pathname.startsWith('/payment');
+  
+  // Jika ini public page, render tanpa app layout
+  if (isPublicPage) {
+    return (
+      <Suspense fallback={<div className="flex items-center justify-center h-screen bg-gray-950 text-white">Loading...</div>}>
+        <Routes>
+          <Route path="/sca" element={<SCALanding />} />
+          <Route path="/payment/*" element={
+            <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white p-8">
+              <div className="text-center">
+                <div className="text-5xl mb-4">✅</div>
+                <h1 className="text-2xl font-bold mb-2">Pembayaran Diproses</h1>
+                <p className="text-gray-400 mb-6">Terima kasih! Cek email Anda untuk konfirmasi.</p>
+                <a href="/" className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-3 rounded-xl font-medium">
+                  Kembali ke Dashboard
+                </a>
+              </div>
+            </div>
+          } />
+        </Routes>
+      </Suspense>
+    );
+  }
+
   const [blueprints, setBlueprints] = useState<Blueprint[]>(BLUEPRINTS);
   const [deployedEcosystems, setDeployedEcosystems] = useState<DeployedEcosystem[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({
@@ -404,7 +433,7 @@ const App: React.FC = () => {
             <Route path="/master" element={<MasterControl />} />
             <Route path="/supabase" element={<SupabaseDashboard />} />
             <Route path="/build" element={<BuildInPublic />} />
-            <Route path="/sca" element={<SCA />} />
+            <Route path="/sca/app" element={<SCA />} />
             <Route path="/sica" element={<SICA />} />
             <Route path="/shga" element={<SHGA />} />
           </Routes>
