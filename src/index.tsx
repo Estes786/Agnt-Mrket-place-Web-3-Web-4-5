@@ -1974,10 +1974,11 @@ app.get('/api/sovereign/status', (c) => {
     success: true,
     ecosystem: 'GANI HYPHA Sovereign',
     agents: [
-      { id: 'SCA', name: 'Sovereign Contract Analyst', status: 'active', endpoints: ['/api/sca/analyze', '/api/sca/history'] },
-      { id: 'SICA', name: 'Sovereign Iftar & Catering Agent', status: 'active', endpoints: ['/api/sica/orders/ai-analyze', '/api/sica/ai/menu-recommend'] },
-      { id: 'SHGA', name: 'Sovereign Hamper & Gift Agent', status: 'active', endpoints: ['/api/shga/ai/recommend', '/api/shga/products'] },
-      { id: 'SMA', name: 'Sovereign Multi-Industry Agent', status: 'planned', endpoints: [] }
+      { id: 'SCA', name: 'Sovereign Contract Analyst', status: 'active', landing: '/sca-landing', app: '/sca/app', endpoints: ['/api/sca/analyze', '/api/sca/history', '/api/sca/stats'] },
+      { id: 'SICA', name: 'Sovereign Iftar & Catering Agent', status: 'active', landing: '/sica-landing', app: '/sica', endpoints: ['/api/sica/orders/ai-analyze', '/api/sica/ai/menu-recommend', '/api/sica/orders'] },
+      { id: 'SHGA', name: 'Sovereign Hamper & Gift Agent', status: 'active', landing: '/shga-landing', app: '/shga', endpoints: ['/api/shga/ai/recommend', '/api/shga/products', '/api/shga/lebaran/countdown'] },
+      { id: 'BDE', name: 'Barber Dynasty Engine', status: 'active', landing: '/sovereign-barber', app: '/sovereign-barber', endpoints: ['/sovereign-barber'] },
+      { id: 'SMA', name: 'Sovereign Multi-Industry Agent', status: 'planned', landing: null, app: null, endpoints: [] }
     ],
     web25_bridge: {
       status: 'active',
@@ -1990,6 +1991,69 @@ app.get('/api/sovereign/status', (c) => {
       PREMALTA: { contract: '0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7', network: 'Base', status: 'deployed', liquidity: 'pending_$300_usdc' },
       HYPHA: { contract: null, network: 'Ethereum', status: 'planned_q3_2026' }
     }
+  })
+})
+
+// ── War Room — Public transparency dashboard ─────────────────
+// Shows real-time march toward $500 USDC for PREMALTA liquidity
+app.get('/api/sovereign/war-room', async (c) => {
+  const env = c.env as Record<string, string>
+  const keys = getSbKeys(env)
+  
+  let totalRevenue = 0
+  let totalOrders = 0
+  let revenueByAgent: Record<string, number> = { SCA: 0, SICA: 0, SHGA: 0, BDE: 0 }
+  
+  // Try fetch from Supabase payment_orders
+  try {
+    const orders = await sbFetch('payment_orders?select=*&status=eq.SUCCESS&order=created_at.desc&limit=100', {}, false, keys)
+    if (Array.isArray(orders)) {
+      totalOrders = orders.length
+      orders.forEach((o: Record<string, unknown>) => {
+        const amt = (o.amount as number) || 0
+        const agent = (o.agent as string) || 'SCA'
+        totalRevenue += amt
+        revenueByAgent[agent] = (revenueByAgent[agent] || 0) + amt
+      })
+    }
+  } catch { /* Supabase not yet migrated — use placeholder */ }
+
+  const GOAL_IDR = 8000000 // ~$500 USD @ Rp 16,000/USD
+  const progress = Math.min(100, Math.round((totalRevenue / GOAL_IDR) * 100))
+  const remaining = Math.max(0, GOAL_IDR - totalRevenue)
+  const estimatedSubscribersNeeded = Math.ceil(remaining / 99000) // minimum SICA starter plan
+
+  return c.json({
+    success: true,
+    title: '⚔️ GANI HYPHA War Room — $500 Holy Path',
+    description: 'Transparansi penuh menuju $500 USD untuk PREMALTA liquidity pool',
+    mission: 'Weaponize Web2 cashflow for Web3 supremacy',
+    goal: {
+      usd: 500,
+      idr: GOAL_IDR,
+      description: 'PREMALTA/USDC Liquidity Pool di Uniswap V3 Base'
+    },
+    progress: {
+      total_revenue_idr: totalRevenue,
+      total_orders: totalOrders,
+      percentage: progress,
+      remaining_idr: remaining,
+      estimated_subscribers_needed: estimatedSubscribersNeeded,
+      status: progress >= 100 ? 'MISSION_COMPLETE' : progress >= 50 ? 'ON_TRACK' : 'EARLY_STAGE'
+    },
+    revenue_by_agent: revenueByAgent,
+    token: {
+      PREMALTA: '0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7',
+      network: 'Base',
+      basescan: 'https://basescan.org/address/0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7',
+      liquidity_status: 'PENDING — membutuhkan $300 USDC di Uniswap V3'
+    },
+    phase: progress === 0 ? 'Phase 1: Blitzkrieg (Days 1-7)' : 
+           progress < 50 ? 'Phase 1: Blitzkrieg — Building momentum!' :
+           progress < 100 ? 'Phase 2: The Siege — Closing in!' :
+           'Phase 3: Holy Ascension — MISSION COMPLETE!',
+    timestamp: new Date().toISOString(),
+    philosophy: 'Akar Dalam, Cabang Tinggi. Gyss! 🙏🏻'
   })
 })
 
@@ -2163,17 +2227,20 @@ function duitkuMd5Sync(str: string): string {
 // Plan definitions
 const SUBSCRIPTION_PLANS: Record<string, { name: string; amount: number; agent: string; description: string }> = {
   // SCA Plans
+  'sca-trial': { name: 'SCA Trial', amount: 0, agent: 'SCA', description: 'Coba SCA gratis 7 hari — 3 analisis kontrak' },
   'sca-starter': { name: 'SCA Starter', amount: 149000, agent: 'SCA', description: 'Analisis kontrak 10x/bulan — Cocok untuk freelancer & UKM' },
   'sca-pro': { name: 'SCA Professional', amount: 499000, agent: 'SCA', description: 'Analisis kontrak unlimited/bulan + priority support' },
   'sca-enterprise': { name: 'SCA Enterprise', amount: 1499000, agent: 'SCA', description: 'Multi-user, white-label, API access langsung' },
   // SICA Plans
+  'sica-trial': { name: 'SICA Trial', amount: 0, agent: 'SICA', description: 'Coba SICA gratis 7 hari — 5 order AI parse/hari' },
   'sica-starter': { name: 'SICA Starter', amount: 99000, agent: 'SICA', description: 'Manajemen order katering 50 pesanan/bulan' },
   'sica-pro': { name: 'SICA Professional', amount: 299000, agent: 'SICA', description: 'Unlimited order + AI menu recommendations + laporan keuangan' },
-  'sica-enterprise': { name: 'SICA Enterprise', amount: 799000, agent: 'SICA', description: 'Multi-cabang, WhatsApp bot, dashboard custom' },
-  // SHGA Plans
-  'shga-starter': { name: 'SHGA Starter', amount: 99000, agent: 'SHGA', description: 'Katalog hamper 20 produk, order tracking basic' },
-  'shga-pro': { name: 'SHGA Professional', amount: 299000, agent: 'SHGA', description: 'Unlimited produk + AI gift recommendations + bulk order' },
-  'shga-lebaran': { name: 'SHGA Lebaran Special', amount: 499000, agent: 'SHGA', description: 'Paket lengkap untuk musim Lebaran: bulk order, custom hamper, pengiriman' },
+  'sica-enterprise': { name: 'SICA Enterprise', amount: 999000, agent: 'SICA', description: 'Multi-cabang, WhatsApp bot, API GrabFood/GoFood, dashboard custom' },
+  // SHGA Plans  
+  'shga-trial': { name: 'SHGA Trial', amount: 0, agent: 'SHGA', description: 'Coba SHGA gratis 7 hari — katalog 5 produk + AI recommendation 3x/hari' },
+  'shga-lebaran': { name: 'SHGA Lebaran Edition', amount: 299000, agent: 'SHGA', description: 'Paket 3 bulan khusus Lebaran: unlimited produk + AI recommendations + WA notif' },
+  'shga-pro': { name: 'SHGA Pro', amount: 499000, agent: 'SHGA', description: 'Sepanjang tahun: multi-event, custom packaging, analytics, API e-commerce' },
+  'shga-enterprise': { name: 'SHGA Enterprise', amount: 1499000, agent: 'SHGA', description: 'White-label, B2B corporate gift, ERP integration, dedicated AM' },
 }
 
 // POST /api/payment/create — Buat transaksi pembayaran Duitku POP v2

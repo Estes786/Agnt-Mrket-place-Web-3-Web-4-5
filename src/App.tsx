@@ -35,6 +35,8 @@ const SCA = lazy(() => import('./components/SCA'));
 const SICA = lazy(() => import('./components/SICA'));
 const SHGA = lazy(() => import('./components/SHGA'));
 const SCALanding = lazy(() => import('./components/SCALanding'));
+const SICALanding = lazy(() => import('./components/SICALanding'));
+const SHGALanding = lazy(() => import('./components/SHGALanding'));
 const SovereignStore = lazy(() => import('./components/SovereignStore'));
 const SovereignBarber = lazy(() => import('./components/SovereignBarber'));
 const SovereignLegacy = lazy(() => import('./components/SovereignLegacy'));
@@ -55,7 +57,10 @@ const App: React.FC = () => {
   const location = useLocation();
   
   // Public routes yang tidak butuh app layout (sidebar, header, dll)
-  const isPublicPage = location.pathname.startsWith('/payment');
+  const isPublicPage = location.pathname.startsWith('/payment') || 
+    location.pathname === '/sca-landing' ||
+    location.pathname === '/sica-landing' ||
+    location.pathname === '/shga-landing';
   
   // Jika ini public page, render tanpa app layout
   if (isPublicPage) {
@@ -63,6 +68,9 @@ const App: React.FC = () => {
       <Suspense fallback={<div className="flex items-center justify-center h-screen bg-gray-950 text-white">Loading...</div>}>
         <Routes>
           <Route path="/sca" element={<SCALanding />} />
+          <Route path="/sca-landing" element={<SCALanding />} />
+          <Route path="/sica-landing" element={<SICALanding />} />
+          <Route path="/shga-landing" element={<SHGALanding />} />
           <Route path="/payment/*" element={
             <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white p-8">
               <div className="text-center">
@@ -439,7 +447,9 @@ const App: React.FC = () => {
             <Route path="/sca/app" element={<SCA />} />
             <Route path="/sca" element={<SCA />} />
             <Route path="/sica" element={<SICA />} />
+            <Route path="/sica/app" element={<SICA />} />
             <Route path="/shga" element={<SHGA />} />
+            <Route path="/shga/app" element={<SHGA />} />
             <Route path="/store" element={<SovereignStore />} />
             <Route path="/sovereign-barber" element={<SovereignBarber />} />
             <Route path="/sovereign-legacy" element={<SovereignLegacy />} />
