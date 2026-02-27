@@ -76,6 +76,9 @@ type Bindings = {
   DUITKU_API_KEY?: string;
   DUITKU_ENV?: string;
   DUITKU_CALLBACK_URL?: string;
+  // ── Fonnte WhatsApp Bot ────────────────────
+  FONNTE_TOKEN?: string;
+  FONNTE_PHONE?: string;
 }
 
 // ── Supabase Config ─────────────────────────────────────────
@@ -3260,13 +3263,23 @@ app.get('/api/payment/info', (c) => {
 // ══════════════════════════════════════════════════════════════
 
 const FONNTE_API_URL = 'https://api.fonnte.com/send'
-const FONNTE_TOKEN = 'kKqYqDNACmtiXNqbUaQvyan'
-const FONNTE_PHONE = '085643383832'
+const FONNTE_TOKEN_DEFAULT = 'kKqYqDNACmtiXNqbUaQvyan'
+const FONNTE_PHONE_DEFAULT = '085643383832'
+
+// Helper: get Fonnte token from env or fallback to hardcoded
+function getFonnteToken(env: Record<string, string | undefined>): string {
+  return env.FONNTE_TOKEN || FONNTE_TOKEN_DEFAULT
+}
+function getFonntePhone(env: Record<string, string | undefined>): string {
+  return env.FONNTE_PHONE || FONNTE_PHONE_DEFAULT
+}
 
 // POST /api/whatsapp/send — Kirim pesan WhatsApp via Fonnte
 app.post('/api/whatsapp/send', async (c) => {
   try {
     const body = await c.req.json() as { phone?: string; message?: string; target?: string }
+    const FONNTE_PHONE = getFonntePhone(c.env as Record<string, string | undefined>)
+    const FONNTE_TOKEN = getFonnteToken(c.env as Record<string, string | undefined>)
     const phone = body.phone || body.target || FONNTE_PHONE
     const message = body.message
 
@@ -3309,6 +3322,7 @@ app.post('/api/whatsapp/send', async (c) => {
       bot_phone: FONNTE_PHONE,
     })
   } catch (err) {
+    const FONNTE_PHONE = getFonntePhone(c.env as Record<string, string | undefined>)
     return c.json({
       success: false,
       error: `WhatsApp send failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -3320,20 +3334,23 @@ app.post('/api/whatsapp/send', async (c) => {
 // POST /api/whatsapp/notify-payment — Notifikasi setelah payment berhasil
 app.post('/api/whatsapp/notify-payment', async (c) => {
   try {
-    const { customer_name, customer_phone, plan_name, order_id, amount_formatted } = await c.req.json() as {
-      customer_name: string; customer_phone: string; plan_name: string; order_id: string; amount_formatted: string
+    const FONNTE_TOKEN = getFonnteToken(c.env as Record<string, string | undefined>)
+    const { customer_name, customer_phone, plan_name, order_id, amount_formatted, plan, amount, payment_url } = await c.req.json() as {
+      customer_name: string; customer_phone?: string; plan_name?: string; plan?: string; order_id?: string; amount_formatted?: string; amount?: number; payment_url?: string
     }
 
-    const phone = customer_phone.startsWith('0') ? '62' + customer_phone.slice(1) : customer_phone
+    const phone = (customer_phone || '').startsWith('0') ? '62' + (customer_phone || '').slice(1) : (customer_phone || '')
+    const planDisplay = plan_name || plan || 'Sovereign Agent'
+    const amtDisplay = amount_formatted || (amount ? `Rp ${amount.toLocaleString('id-ID')}` : '')
 
     const message = `🔥 *SOVEREIGN AGENT ACTIVATED!*
 
 Halo ${customer_name}! 🙏🏻
 
-✅ Paket *${plan_name}* berhasil diaktifkan!
-📦 Order ID: ${order_id}
-💰 Amount: ${amount_formatted}
-
+✅ Paket *${planDisplay}* berhasil diproses!
+📦 Order ID: ${order_id || 'pending'}
+💰 Amount: ${amtDisplay}
+${payment_url ? `💳 Bayar: ${payment_url}\n` : ''}
 🌐 Dashboard: https://gani-hypha-web3.pages.dev
 📜 Docs: https://gani-hypha-web3.pages.dev/holyybd
 
@@ -3342,6 +3359,10 @@ Selamat bergabung di Sovereign Ecosystem!
 _Akar Dalam, Cabang Tinggi. Gyss!_ 🙏🏻
 
 *GANI HYPHA Team*`
+
+    if (!phone) {
+      return c.json({ success: true, message: 'No phone provided, notification skipped' })
+    }
 
     const formData = new FormData()
     formData.append('target', phone)
@@ -3363,6 +3384,7 @@ _Akar Dalam, Cabang Tinggi. Gyss!_ 🙏🏻
 
 // GET /api/whatsapp/info — Info WhatsApp bot
 app.get('/api/whatsapp/info', (c) => {
+  const FONNTE_PHONE = getFonntePhone(c.env as Record<string, string | undefined>)
   return c.json({
     success: true,
     provider: 'Fonnte',
@@ -3371,12 +3393,13 @@ app.get('/api/whatsapp/info', (c) => {
     api_url: FONNTE_API_URL,
     docs: 'https://fonnte.com/docs',
     features: [
-      'Notifikasi payment otomatis',
-      'Konfirmasi order SICA/SHGA',
-      'Marketing blast ke customer',
+      'Notifikasi payment otomatis (BDE + Legacy + SICA + SHGA)',
+      'Konfirmasi order real-time',
+      'Marketing blast ke customer (max 50)',
       'Customer support reply',
+      'Inquiry form dari landing pages',
     ],
-    session_032: 'HOLYYBD Integration Active',
+    session_033: 'BDE + Legacy Landing Integration Active',
   })
 })
 
@@ -3390,6 +3413,7 @@ app.post('/api/whatsapp/broadcast', async (c) => {
     }
 
     const results: { phone: string; success: boolean }[] = []
+    const FONNTE_TOKEN = getFonnteToken(c.env as Record<string, string | undefined>)
 
     for (const phone of phones.slice(0, 50)) { // Max 50 per broadcast
       const normalized = phone.startsWith('0') ? '62' + phone.slice(1) : phone

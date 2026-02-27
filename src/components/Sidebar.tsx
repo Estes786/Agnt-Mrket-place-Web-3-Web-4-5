@@ -39,6 +39,7 @@ const navItems = [
   { path: '/web5', icon: '🕸️', label: 'Web5 Command', sub: 'DWN · DID · Sovereignty', group: 'web5' },
   { path: '/supabase', icon: '🗄️', label: 'Supabase DB', sub: 'RBAC · Revenue · Users', group: 'backend' },
   { path: '/build', icon: '📡', label: 'Build In Public', sub: 'Progress · Community', group: 'backend' },
+  { path: '/holyybd', icon: '📜', label: 'HOLYYBD Docs', sub: 'Public Build Log · Holy Path', group: 'backend', external: true },
 ];
 
 
@@ -66,14 +67,14 @@ const Sidebar: React.FC<SidebarProps> = ({ deployedCount, isOpen, setIsOpen }) =
           </div>
           <div>
             <div className="font-black text-white text-sm tracking-tighter">GANI HYPHA</div>
-            <div className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest">v5.3 Session #030 · 2000% Ready 💰</div>
+            <div className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest">v5.3 Session #033 · HOLY WAR 🔥</div>
           </div>
         </button>
       </div>
 
       {/* Stack Indicator */}
       <div className="px-4 py-3 border-b border-slate-900/60">
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5" style={{maxHeight: '64px', overflow: 'hidden'}}>
           {[
             { label: 'Alchemy', color: 'text-blue-400' },
             { label: 'Groq', color: 'text-purple-400' },
@@ -81,6 +82,8 @@ const Sidebar: React.FC<SidebarProps> = ({ deployedCount, isOpen, setIsOpen }) =
             { label: 'The Graph', color: 'text-pink-400' },
             { label: 'Infura', color: 'text-orange-400' },
             { label: 'Pinata', color: 'text-yellow-400' },
+          { label: 'Fonnte', color: 'text-green-400' },
+          { label: 'Duitku', color: 'text-cyan-400' },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-1.5 bg-slate-900/40 px-2 py-1 rounded-lg">
               <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -102,6 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ deployedCount, isOpen, setIsOpen }) =
                 onClick={() => setIsOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative mb-0.5 ${
+                    (item as {external?: boolean}).external ? 'text-violet-400 hover:text-violet-300 hover:bg-violet-900/20 border border-transparent' :
                     isActive
                       ? 'bg-indigo-600/10 border border-indigo-500/30 text-white'
                       : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/40 border border-transparent'
@@ -140,6 +144,8 @@ const Sidebar: React.FC<SidebarProps> = ({ deployedCount, isOpen, setIsOpen }) =
             {[
               { label: 'Alchemy RPC', status: 'ONLINE', color: 'text-emerald-400' },
               { label: 'Groq API', status: 'ACTIVE', color: 'text-purple-400' },
+              { label: 'Fonnte WA', status: 'READY', color: 'text-green-400' },
+              { label: 'Duitku PG', status: 'SANDBOX', color: 'text-cyan-400' },
               { label: 'The Graph', status: 'SYNCED', color: 'text-pink-400' },
               { label: 'Cloudflare', status: 'DEPLOYED', color: 'text-orange-400' }
             ].map(s => (
