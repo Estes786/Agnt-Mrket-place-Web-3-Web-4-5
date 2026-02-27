@@ -30,7 +30,9 @@ const navItems = [
   { path: '/sica', icon: '🌙', label: 'SICA Katering', sub: 'AI Iftar & Catering Agent', group: 'income' },
   { path: '/shga', icon: '🎁', label: 'SHGA Hamper', sub: 'AI Gift & Hamper Agent', group: 'income' },
   { path: '/sovereign-barber', icon: '💈', label: 'Sovereign Barber', sub: 'AI Barbershop · Community Node', group: 'income' },
+  { path: '/bde-landing', icon: '✂️', label: 'BDE Landing', sub: 'Barber Dynasty · Public Page', group: 'income' },
   { path: '/sovereign-legacy', icon: '🏛️', label: 'Sovereign Legacy', sub: 'Family Vault · Home OS · DID', group: 'income' },
+  { path: '/legacy-landing', icon: '🔐', label: 'Legacy Landing', sub: 'Family Security · Public Page', group: 'income' },
   { path: '/economy', icon: '🌐', label: 'Autonomous Economy', sub: 'Web2→Web5 Engine', group: 'income' },
   { path: '/revenue', icon: '💰', label: 'Revenue Hub', sub: 'SaaS · Micro Services', group: 'income' },
   { path: '/tokens', icon: '🚀', label: 'Token LaunchPad', sub: 'Deploy · Liquidity', group: 'income' },
@@ -64,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ deployedCount, isOpen, setIsOpen }) =
           </div>
           <div>
             <div className="font-black text-white text-sm tracking-tighter">GANI HYPHA</div>
-            <div className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest">v5.2 Real Revenue Engine 💰</div>
+            <div className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest">v5.3 Session #030 · 2000% Ready 💰</div>
           </div>
         </button>
       </div>

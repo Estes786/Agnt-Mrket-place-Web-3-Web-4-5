@@ -40,6 +40,8 @@ const SHGALanding = lazy(() => import('./components/SHGALanding'));
 const SovereignStore = lazy(() => import('./components/SovereignStore'));
 const SovereignBarber = lazy(() => import('./components/SovereignBarber'));
 const SovereignLegacy = lazy(() => import('./components/SovereignLegacy'));
+const BDELanding = lazy(() => import('./components/BDELanding'));
+const SovereignLegacyLanding = lazy(() => import('./components/SovereignLegacyLanding'));
 
 // Loading fallback component
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
@@ -60,7 +62,9 @@ const App: React.FC = () => {
   const isPublicPage = location.pathname.startsWith('/payment') || 
     location.pathname === '/sca-landing' ||
     location.pathname === '/sica-landing' ||
-    location.pathname === '/shga-landing';
+    location.pathname === '/shga-landing' ||
+    location.pathname === '/bde-landing' ||
+    location.pathname === '/legacy-landing';
   
   // Jika ini public page, render tanpa app layout
   if (isPublicPage) {
@@ -71,6 +75,8 @@ const App: React.FC = () => {
           <Route path="/sca-landing" element={<SCALanding />} />
           <Route path="/sica-landing" element={<SICALanding />} />
           <Route path="/shga-landing" element={<SHGALanding />} />
+          <Route path="/bde-landing" element={<BDELanding />} />
+          <Route path="/legacy-landing" element={<SovereignLegacyLanding />} />
           <Route path="/payment/*" element={
             <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white p-8">
               <div className="text-center">
