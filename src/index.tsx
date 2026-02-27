@@ -3252,6 +3252,258 @@ app.get('/api/payment/info', (c) => {
 })
 
 // ══════════════════════════════════════════════════════════════
+// SECTION: WHATSAPP BOT — FONNTE API
+// Session 032: HOLYYBD Integration
+// Phone: 085643383832
+// Token: kKqYqDNACmtiXNqbUaQvyan
+// Docs: https://fonnte.com/docs
+// ══════════════════════════════════════════════════════════════
+
+const FONNTE_API_URL = 'https://api.fonnte.com/send'
+const FONNTE_TOKEN = 'kKqYqDNACmtiXNqbUaQvyan'
+const FONNTE_PHONE = '085643383832'
+
+// POST /api/whatsapp/send — Kirim pesan WhatsApp via Fonnte
+app.post('/api/whatsapp/send', async (c) => {
+  try {
+    const body = await c.req.json() as { phone?: string; message?: string; target?: string }
+    const phone = body.phone || body.target || FONNTE_PHONE
+    const message = body.message
+
+    if (!message) {
+      return c.json({ success: false, error: 'message is required' }, 400)
+    }
+
+    // Normalize phone number (hilangkan 0 di depan, pastikan format 628xxx)
+    const normalizedPhone = phone.startsWith('0')
+      ? '62' + phone.slice(1)
+      : phone.startsWith('+')
+      ? phone.slice(1)
+      : phone
+
+    const formData = new FormData()
+    formData.append('target', normalizedPhone)
+    formData.append('message', message)
+    formData.append('countryCode', '62')
+
+    const response = await fetch(FONNTE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': FONNTE_TOKEN,
+      },
+      body: formData,
+    })
+
+    const result = await response.text()
+    let parsed: Record<string, unknown> = {}
+    try { parsed = JSON.parse(result) } catch { parsed = { raw: result } }
+
+    const success = response.ok && (parsed.status === true || (typeof parsed.status === 'string' && parsed.status !== 'false'))
+
+    return c.json({
+      success,
+      message: success ? '✅ WhatsApp terkirim via Fonnte' : '⚠️ Fonnte response: ' + result,
+      phone: normalizedPhone,
+      fonnte_response: parsed,
+      provider: 'Fonnte',
+      bot_phone: FONNTE_PHONE,
+    })
+  } catch (err) {
+    return c.json({
+      success: false,
+      error: `WhatsApp send failed: ${err instanceof Error ? err.message : String(err)}`,
+      fallback: 'Hubungi admin manual di WhatsApp: ' + FONNTE_PHONE,
+    }, 500)
+  }
+})
+
+// POST /api/whatsapp/notify-payment — Notifikasi setelah payment berhasil
+app.post('/api/whatsapp/notify-payment', async (c) => {
+  try {
+    const { customer_name, customer_phone, plan_name, order_id, amount_formatted } = await c.req.json() as {
+      customer_name: string; customer_phone: string; plan_name: string; order_id: string; amount_formatted: string
+    }
+
+    const phone = customer_phone.startsWith('0') ? '62' + customer_phone.slice(1) : customer_phone
+
+    const message = `🔥 *SOVEREIGN AGENT ACTIVATED!*
+
+Halo ${customer_name}! 🙏🏻
+
+✅ Paket *${plan_name}* berhasil diaktifkan!
+📦 Order ID: ${order_id}
+💰 Amount: ${amount_formatted}
+
+🌐 Dashboard: https://gani-hypha-web3.pages.dev
+📜 Docs: https://gani-hypha-web3.pages.dev/holyybd
+
+Selamat bergabung di Sovereign Ecosystem!
+
+_Akar Dalam, Cabang Tinggi. Gyss!_ 🙏🏻
+
+*GANI HYPHA Team*`
+
+    const formData = new FormData()
+    formData.append('target', phone)
+    formData.append('message', message)
+    formData.append('countryCode', '62')
+
+    const response = await fetch(FONNTE_API_URL, {
+      method: 'POST',
+      headers: { 'Authorization': FONNTE_TOKEN },
+      body: formData,
+    })
+
+    const success = response.ok
+    return c.json({ success, message: success ? 'Notifikasi payment terkirim' : 'Fonnte error', phone })
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500)
+  }
+})
+
+// GET /api/whatsapp/info — Info WhatsApp bot
+app.get('/api/whatsapp/info', (c) => {
+  return c.json({
+    success: true,
+    provider: 'Fonnte',
+    bot_phone: FONNTE_PHONE,
+    status: 'active',
+    api_url: FONNTE_API_URL,
+    docs: 'https://fonnte.com/docs',
+    features: [
+      'Notifikasi payment otomatis',
+      'Konfirmasi order SICA/SHGA',
+      'Marketing blast ke customer',
+      'Customer support reply',
+    ],
+    session_032: 'HOLYYBD Integration Active',
+  })
+})
+
+// POST /api/whatsapp/broadcast — Broadcast pesan ke multiple nomor
+app.post('/api/whatsapp/broadcast', async (c) => {
+  try {
+    const { phones, message } = await c.req.json() as { phones: string[]; message: string }
+
+    if (!phones?.length || !message) {
+      return c.json({ success: false, error: 'phones array and message required' }, 400)
+    }
+
+    const results: { phone: string; success: boolean }[] = []
+
+    for (const phone of phones.slice(0, 50)) { // Max 50 per broadcast
+      const normalized = phone.startsWith('0') ? '62' + phone.slice(1) : phone
+      const formData = new FormData()
+      formData.append('target', normalized)
+      formData.append('message', message)
+      formData.append('countryCode', '62')
+
+      try {
+        const res = await fetch(FONNTE_API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': FONNTE_TOKEN },
+          body: formData,
+        })
+        results.push({ phone: normalized, success: res.ok })
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 500))
+      } catch {
+        results.push({ phone: normalized, success: false })
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length
+    return c.json({
+      success: true,
+      sent: successCount,
+      failed: results.length - successCount,
+      total: results.length,
+      results,
+    })
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500)
+  }
+})
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: HOLYYBD PUBLIC DOCUMENTATION API
+// Session 032: Holy Public Docs
+// ══════════════════════════════════════════════════════════════
+
+// GET /api/holy/status — HOLYYBD public status endpoint
+app.get('/api/holy/status', async (c) => {
+  const env = c.env as Record<string, string>
+  const keys = getSbKeys(env)
+
+  let revenueData = { total_revenue: 0, paying_users: 0, mrr: 0 }
+  try {
+    const orders = await sbFetch('payment_orders?select=amount,status&status=eq.SUCCESS', {}, false, keys)
+    if (Array.isArray(orders)) {
+      revenueData.paying_users = orders.length
+      revenueData.total_revenue = orders.reduce((sum: number, o: { amount: number }) => sum + (o.amount || 0), 0)
+      revenueData.mrr = revenueData.total_revenue / Math.max(1, 1)
+    }
+  } catch { /* graceful fallback */ }
+
+  return c.json({
+    success: true,
+    page: 'HOLYYBD — Holy Public Documentation',
+    version: '1.0',
+    session: '032',
+    url: 'https://gani-hypha-web3.pages.dev/holyybd',
+    philosophy: 'Akar Dalam, Cabang Tinggi. Gyss! 🙏🏻',
+    metrics: {
+      growth_targets: { revenue: '+1099%', users: '+500%', agent_roi: '+1000%', token: '+2000%' },
+      current_state: {
+        revenue_idr: revenueData.total_revenue,
+        revenue_usd: (revenueData.total_revenue / 16000).toFixed(2),
+        paying_users: revenueData.paying_users,
+        target_idr: 8000000,
+        target_usd: 500,
+        progress_pct: ((revenueData.total_revenue / 8000000) * 100).toFixed(2),
+      }
+    },
+    agents: ['SCA', 'SICA', 'SHGA', 'BDE', 'SovereignLegacy', 'SMA'],
+    integrations: {
+      payment: 'Duitku POP v2 (Merchant: DS28466)',
+      whatsapp: `Fonnte Bot (${FONNTE_PHONE})`,
+      ai: 'Groq llama-3.3-70b',
+      database: 'Supabase PostgreSQL (12 tables)',
+      blockchain: '$PREMALTA on Base L2',
+    },
+    docs: {
+      github: 'https://github.com/Estes786/Agnt-Mrket-place-Web-3-Web-4-5',
+      landing: 'https://gani-hypha-web3.pages.dev',
+      holy_public: 'https://gani-hypha-web3.pages.dev/holyybd',
+    },
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// GET /api/holy/sessions — List semua session handoffs
+app.get('/api/holy/sessions', (c) => {
+  return c.json({
+    success: true,
+    total_sessions: 32,
+    completed: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
+    pending: [33, 34, 35, 36, 37, 38],
+    current: 32,
+    sessions: [
+      { id: 8, title: 'Foundation Layer', status: 'done' },
+      { id: 21, title: 'SICA PRD', status: 'done' },
+      { id: 22, title: 'SHGA PRD', status: 'done' },
+      { id: 26, title: 'SCA + BDE Live', status: 'done' },
+      { id: 29, title: 'Holy 2.5 Upgrade', status: 'done' },
+      { id: 30, title: 'Sovereign Expansion', status: 'done' },
+      { id: 31, title: 'DB Fully Operational', status: 'done' },
+      { id: 32, title: 'HOLYYBD Public Launch', status: 'active' },
+      { id: 33, title: 'Revenue Engine ON', status: 'pending' },
+      { id: 34, title: 'PREMALTA Liquidity', status: 'pending' },
+    ],
+  })
+})
+
+// ══════════════════════════════════════════════════════════════
 // SECTION FINAL: STATIC FILE SERVING + SPA FALLBACK
 // Serve React SPA for all non-API routes (Cloudflare Pages)
 // ══════════════════════════════════════════════════════════════

@@ -42,6 +42,7 @@ const SovereignBarber = lazy(() => import('./components/SovereignBarber'));
 const SovereignLegacy = lazy(() => import('./components/SovereignLegacy'));
 const BDELanding = lazy(() => import('./components/BDELanding'));
 const SovereignLegacyLanding = lazy(() => import('./components/SovereignLegacyLanding'));
+const HOLYYBDLanding = lazy(() => import('./components/HOLYYBDLanding'));
 
 // Loading fallback component
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
@@ -64,7 +65,8 @@ const App: React.FC = () => {
     location.pathname === '/sica-landing' ||
     location.pathname === '/shga-landing' ||
     location.pathname === '/bde-landing' ||
-    location.pathname === '/legacy-landing';
+    location.pathname === '/legacy-landing' ||
+    location.pathname === '/holyybd';
   
   // Jika ini public page, render tanpa app layout
   if (isPublicPage) {
@@ -77,6 +79,7 @@ const App: React.FC = () => {
           <Route path="/shga-landing" element={<SHGALanding />} />
           <Route path="/bde-landing" element={<BDELanding />} />
           <Route path="/legacy-landing" element={<SovereignLegacyLanding />} />
+          <Route path="/holyybd" element={<HOLYYBDLanding />} />
           <Route path="/payment/*" element={
             <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white p-8">
               <div className="text-center">
