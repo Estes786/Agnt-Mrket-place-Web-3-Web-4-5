@@ -1,0 +1,41 @@
+# Cloudflare Pages Headers untuk performa optimal
+
+# Main HTML - no cache (untuk SPA routing)
+/
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# JS/CSS assets - long cache karena ada hash di nama file
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+# Landing pages - cache pendek
+/bde-landing
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+  
+/sca-landing
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+  
+/sica-landing
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+  
+/shga-landing
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+  
+/legacy-landing
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+  
+/sma-landing
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+
+/sovereign-barber
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+
+/sovereign-legacy
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+
+/store
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
