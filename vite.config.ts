@@ -15,13 +15,42 @@ export default defineConfig({
         outDir: 'dist',
         emptyOutDir: false,  // Don't delete _worker.js
         rollupOptions: {
-          input: { main: path.resolve(__dirname, 'index.html') }
+          input: { main: path.resolve(__dirname, 'index.html') },
+          output: {
+            // ✅ Optimize: Manual chunk splitting untuk faster loading
+            manualChunks(id) {
+              // Vendor: React ecosystem (load once, cache forever)
+              if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+                return 'react-vendor';
+              }
+              if (id.includes('node_modules/react-router-dom') || id.includes('node_modules/react-router')) {
+                return 'router';
+              }
+              // Charts - heavy, load on demand
+              if (id.includes('node_modules/recharts')) {
+                return 'recharts';
+              }
+              // Motion/animation
+              if (id.includes('node_modules/motion') || id.includes('node_modules/framer-motion')) {
+                return 'motion';
+              }
+              // Ethers - heavy Web3 lib
+              if (id.includes('node_modules/ethers')) {
+                return 'ethers';
+              }
+              // Landing pages cluster - group together for fast preload
+              if (id.includes('LandingNav') || id.includes('SovereignNavBar') || id.includes('SovereignFooter')) {
+                return 'landing-nav';
+              }
+            }
+          }
         },
-        chunkSizeWarningLimit: 3000,
+        chunkSizeWarningLimit: 1000,
+        // ✅ Enable minification
+        minify: 'esbuild',
       }
     : {
         outDir: 'dist',
-        // Hono worker build — pages plugin handles this
       },
 
   resolve: {
