@@ -10,6 +10,7 @@
 // ============================================================
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 // ─── TYPES ────────────────────────────────────────────────
 interface FamilyMember {
@@ -338,7 +339,12 @@ const SovereignLegacy: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white">
 
-      {/* ── TOAST ── */}
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="legacy"
+        onCtaClick={() => window.location.href = '/legacy-landing#pricing'}
+        ctaLabel="Upgrade Plan"
+      />
       {notification && (
         <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-black max-w-sm transition-all ${
           notification.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' :
@@ -1127,6 +1133,7 @@ const SovereignLegacy: React.FC = () => {
           </div>
         )}
       </div>
+      <SovereignFooter currentAgent="legacy" agentIcon="🏛️" agentColor="text-purple-400 hover:text-purple-300" />
     </div>
   );
 };

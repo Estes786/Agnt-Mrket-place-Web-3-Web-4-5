@@ -10,6 +10,7 @@
 // ============================================================
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 // ─── TYPES ────────────────────────────────────────────────
 interface Client {
@@ -403,7 +404,12 @@ const SovereignBarber: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
 
-      {/* ── TOAST NOTIFICATION ── */}
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="bde"
+        onCtaClick={() => window.location.href = '/bde-landing#pricing'}
+        ctaLabel="Upgrade Plan"
+      />
       {notification && (
         <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-black transition-all animate-pulse ${
           notification.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' :
@@ -1226,6 +1232,7 @@ const SovereignBarber: React.FC = () => {
           </div>
         )}
       </div>
+      <SovereignFooter currentAgent="bde" agentIcon="✂️" agentColor="text-yellow-400 hover:text-yellow-300" />
     </div>
   );
 };

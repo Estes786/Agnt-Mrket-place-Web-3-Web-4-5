@@ -8,6 +8,7 @@
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 interface PaymentResult {
   success?: boolean;
@@ -44,14 +45,22 @@ const SovereignLegacyLanding: React.FC = () => {
   const [activeFeature, setActiveFeature] = useState('vault');
 
   useEffect(() => {
-    fetch('/api/sovereign/war-room')
+    // Non-blocking fetch dengan timeout 3s
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    fetch('/api/sovereign/war-room', { signal: controller.signal })
       .then(r => r.json())
       .then((d: { progress?: { total_revenue_idr?: number; percentage?: number } }) => {
         if (d.progress) setWarRoom({
           total_revenue_idr: d.progress.total_revenue_idr || 0,
           percentage: d.progress.percentage || 0
         });
-      }).catch(() => {});
+      })
+      .catch(() => {
+        // Static fallback jika API lambat
+        setWarRoom({ total_revenue_idr: 2100000, percentage: 26 });
+      })
+      .finally(() => clearTimeout(timeoutId));
 
     let count = 0;
     const timer = setInterval(() => {

@@ -8,6 +8,7 @@
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 interface Plan {
   id: string;
@@ -288,46 +289,27 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ plan, onClose }) => {
 };
 
 // ── Ramadan Countdown ────────────────────────────────────────
+// Calculate countdown from client-side immediately (no API needed)
+const calcCountdown = () => {
+  const lebaranDate = new Date('2026-03-31T00:00:00+07:00');
+  const diff = lebaranDate.getTime() - Date.now();
+  if (diff <= 0) return null;
+  return {
+    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+    minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+    seconds: Math.floor((diff % (1000 * 60)) / 1000),
+  };
+};
+
 const RamadanCountdown: React.FC = () => {
-  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  // Init langsung dari client-side tanpa API call
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(calcCountdown);
 
   useEffect(() => {
-    const getRamadanData = async () => {
-      try {
-        const res = await fetch('/api/shga/lebaran/countdown');
-        const data = await res.json();
-        if (data.days_until_lebaran !== undefined) {
-          setCountdown({ days: data.days_until_lebaran, hours: 0, minutes: 0, seconds: 0 });
-        }
-      } catch {
-        // fallback static calculation
-        const lebaranDate = new Date('2026-03-31T00:00:00');
-        const now = new Date();
-        const diff = lebaranDate.getTime() - now.getTime();
-        if (diff > 0) {
-          setCountdown({
-            days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-            hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-            minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-            seconds: Math.floor((diff % (1000 * 60)) / 1000),
-          });
-        }
-      }
-    };
-
-    getRamadanData();
+    // Update setiap detik dari client-side (no API needed)
     const interval = setInterval(() => {
-      const lebaranDate = new Date('2026-03-31T00:00:00');
-      const now = new Date();
-      const diff = lebaranDate.getTime() - now.getTime();
-      if (diff > 0) {
-        setCountdown({
-          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((diff % (1000 * 60)) / 1000),
-        });
-      }
+      setCountdown(calcCountdown());
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -389,6 +371,12 @@ const SICALanding: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="sica"
+        onCtaClick={() => setSelectedPlan(PLANS[1])}
+        ctaLabel="Mulai Sekarang"
+      />
       {/* ── HEADER ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-gray-950/90 backdrop-blur border-b border-gray-800">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">

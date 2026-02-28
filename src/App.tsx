@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+
+// Helper: redirect ke home
+const RedirectToHome: React.FC = () => <Navigate to="/" replace />;
 import { BLUEPRINTS } from './constants';
 import { DeployedEcosystem, Blueprint, UserStats } from './types';
 
@@ -63,6 +66,7 @@ const App: React.FC = () => {
   const location = useLocation();
   
   // Public routes yang tidak butuh app layout (sidebar, header, dll)
+  // CRITICAL: semua landing pages dan sovereign pages harus masuk sini agar tidak load full app
   const isPublicPage = location.pathname.startsWith('/payment') || 
     location.pathname === '/sca-landing' ||
     location.pathname === '/sca' ||
@@ -71,7 +75,10 @@ const App: React.FC = () => {
     location.pathname === '/bde-landing' ||
     location.pathname === '/legacy-landing' ||
     location.pathname === '/sma-landing' ||
-    location.pathname === '/holyybd';
+    location.pathname === '/holyybd' ||
+    location.pathname === '/sovereign-barber' ||
+    location.pathname === '/sovereign-legacy' ||
+    location.pathname === '/i';
   
   // Loading fallback yang lebih smooth - tidak blank, tidak lama
   const PublicLoadingFallback = () => (
@@ -100,12 +107,15 @@ const App: React.FC = () => {
           <Route path="/legacy-landing" element={<SovereignLegacyLanding />} />
           <Route path="/holyybd" element={<HOLYYBDLanding />} />
           <Route path="/sma-landing" element={<SMALanding />} />
+          <Route path="/sovereign-barber" element={<SovereignBarber />} />
+          <Route path="/sovereign-legacy" element={<SovereignLegacy />} />
+          <Route path="/i" element={<SCALanding />} />
           <Route path="/payment/success" element={<PaymentResultPage />} />
           <Route path="/payment/failed" element={<PaymentResultPage />} />
           <Route path="/payment/pending" element={<PaymentResultPage />} />
           <Route path="/payment/*" element={<PaymentResultPage />} />
           {/* Fallback: redirect ke home jika tidak cocok */}
-          <Route path="*" element={<SCALanding />} />
+          <Route path="*" element={<RedirectToHome />} />
         </Routes>
       </Suspense>
     );
