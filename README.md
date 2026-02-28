@@ -1,265 +1,187 @@
-# GANI HYPHA — Autonomous Economy Engine v5.2
+# 🧬 GANI HYPHA v5.3 — AI Agent Marketplace Web3/Web4/Web5
 
-> **Web2 + Web3 + Web4 + Web5 AI Agent Marketplace**  
-> *"Akar Dalam, Cabang Tinggi" — Gyss! 🙏🏻*
-
----
-
-## 🚀 Platform Status: LIVE ✅
-
-| Service | Status | Details |
-|---------|--------|---------|
-| Cloudflare Pages | ✅ LIVE | gani-hypha-web3.pages.dev |
-| Supabase DB | ✅ Connected | 9 tables, Project: drhitwkbkdnnepnnqbmo |
-| Groq AI | ✅ Connected | llama-3.3-70b-versatile |
-| Alchemy RPC | ✅ Connected | Ethereum mainnet live |
-| Pinata IPFS | ✅ Connected | Files pinned to IPFS |
-| All Credentials | ✅ 12/12 | All APIs configured |
-
----
+> *"Akar Dalam, Cabang Tinggi"* — Deep Roots, High Branches. Gyss! 🙏🏻
 
 ## 🌐 URLs
 
 | Environment | URL |
 |-------------|-----|
 | **Production** | https://gani-hypha-web3.pages.dev |
-| **API Health** | https://gani-hypha-web3.pages.dev/api/health |
-| **Credentials** | https://gani-hypha-web3.pages.dev/api/credentials/check |
-| **GitHub Repo** | https://github.com/Estes786/Agnt-Mrket-place-Web-3-Web-4-5 |
-| **Sandbox** | http://localhost:3000 (development) |
+| **Latest Deploy** | https://92d907d4.gani-hypha-web3.pages.dev |
+| **GitHub** | https://github.com/Estes786/Agnt-Mrket-place-Web-3-Web-4-5 |
 
----
+## ✅ Features Selesai (Session #041)
 
-## 🏗️ Architecture — Inverse Pyramid
+### Bug Fixes — MSHH ERROR (Session #041)
+- **[CRITICAL] React Hooks Violation Fixed**: `useState`/`useEffect` sebelumnya dipanggil SETELAH `if (isPublicPage) return` → crash React → CSS dump ke layar
+- **[CRITICAL] ErrorBoundary Added**: `AppErrorBoundary` class component di semua level — mencegah blank screen & CSS dump
+- **[CRITICAL] Groq Timeout 15s**: `groqFetch()` helper dengan `AbortController` — mencegah freeze tak terbatas
+- **[MAJOR] Native Loading Screen**: `#app-loading` HTML screen sebelum React mount — eliminasi blank screen awal
+- **[MAJOR] PublicPages Component**: Component terpisah untuk public routes — hooks aman, tidak ada violation
 
-```
-┌──────────────────────────────────────────────┐
-│  WEB5 — Self-Sovereign Identity (DWN/DID)    │  ← Future
-├──────────────────────────────────────────────┤
-│  WEB4 — AI Orchestration Layer               │  ← Current
-│  Groq llama-3.3-70b · CrewAI · LangChain    │
-├──────────────────────────────────────────────┤
-│  WEB3 — Blockchain Foundation                │  ← Active
-│  Supabase · Alchemy · Pinata · The Graph    │
-└──────────────────────────────────────────────┘
-```
+### Performance Fixes (Session #040)
+- Main bundle: **794KB → 20KB** (gzip ~6KB) 
+- 15+ manual chunks via Vite rollupOptions
+- SPA navigation via `history.pushState` + `PopStateEvent`
+- Google Fonts non-blocking (`rel=preload` + `onload`)
+- Cloudflare cache headers (`public/_headers`)
 
----
+### Backend Fixes (Session #040-041)
+- `bde-empire` plan: Rp 999.000 ✅
+- `shga-starter` plan: Rp 199.000 ✅
+- `/api/ping` ultra-fast endpoint
+- `/api/health` v5.3.0 dengan Supabase + Groq status
+- Groq proxy route via `/api/ai/gani` (no key di frontend)
 
-## 🔧 Tech Stack
+## 🗺️ Route Map
 
-**Frontend:** React 19, Vite 6, TailwindCSS 4, react-router-dom 7, recharts, motion  
-**Backend:** Hono v4 on Cloudflare Workers (40+ routes)  
-**AI:** Groq llama-3.3-70b-versatile (128K context)  
-**Database:** Supabase PostgreSQL + RLS (9 tables)  
-**Blockchain:** Alchemy, Infura, Ankr, Chainstack RPC providers  
-**Storage:** Pinata IPFS  
-**Identity:** Web3Auth MPC + Privy + W3C DID  
-**Indexing:** The Graph Protocol  
-**Auth:** Supabase Auth + JWT  
+### Public Landing Pages (no auth required)
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/bde-landing` | BDELanding | Barber Dynasty Empire |
+| `/sca-landing` | SCALanding | Sovereign Contract Advisor |
+| `/sica-landing` | SICALanding | Smart Invoice & Catering AI |
+| `/shga-landing` | SHGALanding | Sovereign Hamper & Gift AI |
+| `/sma-landing` | SMALanding | Sovereign Multi-Industry Agent |
+| `/legacy-landing` | SovereignLegacyLanding | Family Legacy Vault |
+| `/sovereign-barber` | SovereignBarber | Sovereign Barber App |
+| `/sovereign-legacy` | SovereignLegacy | Sovereign Legacy App |
+| `/store` | SovereignStore | Sovereign Agent Store |
+| `/holyybd` | HOLYYBDLanding | HOLYYBD Documentation |
+| `/i` | SCALanding | Short URL untuk SCA |
 
----
+### App Routes (main dashboard)
+| Route | Component |
+|-------|-----------|
+| `/` | Marketplace |
+| `/dashboard` | Command Center |
+| `/architect` | Architect Mode |
+| `/tokenomics` | Tokenomics |
+| `/premalta` | $PREMALTA Dashboard |
+| `/store` | Sovereign Store |
+| ... | 20+ more routes |
 
-## 🔑 API Integrations (All Configured ✅)
+### API Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/ping` | GET | Ultra-fast health check |
+| `/api/health` | GET | Full system status |
+| `/api/ai/gani` | POST | Groq AI chat (GANI) |
+| `/api/ai/chat` | POST | AI chat with context |
+| `/api/payment/create` | POST | Buat transaksi Duitku |
+| `/api/payment/callback` | POST | Payment webhook |
+| `/api/blockchain/block` | GET | Latest ETH block |
+| `/api/blockchain/gas` | GET | Gas price |
 
-| Service | Purpose | Status |
-|---------|---------|--------|
-| Supabase | Database + Auth + RLS | ✅ 9 tables |
-| Groq AI | LLM inference (llama-3.3-70b) | ✅ Live |
-| Alchemy | Ethereum/Polygon/Base RPC | ✅ Block #24M+ |
-| Infura | Backup RPC + Gas API | ✅ Configured |
-| Ankr | Fallback RPC | ✅ Configured |
-| Chainstack | Premium RPC nodes | ✅ Configured |
-| ThirdWeb | Web3 SDK + contracts | ✅ Configured |
-| Web3Auth | MPC Social Login | ✅ Configured |
-| Privy | Email/Phone wallet | ✅ Configured |
-| The Graph | Blockchain indexing | ✅ Configured |
-| Pinata | IPFS file storage | ✅ Live |
-| Etherscan | Contract verification | ✅ Configured |
+## 💳 Payment Plans
 
----
+### BDE (Barber Dynasty Empire)
+- `bde-trial`: Rp 0 (gratis)
+- `bde-starter`: Rp 149.000
+- `bde-pro`: Rp 349.000
+- `bde-enterprise` / `bde-empire`: Rp 999.000
 
-## 📊 Key API Endpoints
+### SCA (Sovereign Contract Advisor)
+- `sca-trial`: Rp 0
+- `sca-starter`: Rp 149.000
+- `sca-pro`: Rp 499.000
+- `sca-enterprise`: Rp 1.499.000
 
-### Platform
-- `GET /api/health` — Platform health + Supabase status
-- `GET /api/credentials/check` — Verify all 12 APIs (diagnostic)
+### SICA (Smart Invoice & Catering AI)
+- `sica-trial`: Rp 0
+- `sica-starter`: Rp 99.000
+- `sica-pro`: Rp 299.000
+- `sica-enterprise`: Rp 999.000
 
-### AI
-- `POST /api/ai/chat` — Groq llama-3.3-70b chat
-- `POST /api/ai/gani` — GANI AI assistant
-- `POST /api/sca/analyze` — Sovereign Contract Analyst (AI contract review)
-- `GET /api/sca/plans` — SCA pricing plans
+### SHGA (Sovereign Hamper & Gift AI)
+- `shga-trial`: Rp 0
+- `shga-starter`: Rp 199.000 ✅ NEW
+- `shga-pro`: Rp 499.000
+- `shga-enterprise`: Rp 1.499.000
 
-### Blockchain
-- `GET /api/blockchain/block` — Current Ethereum block (Alchemy)
-- `GET /api/blockchain/gas` — Gas prices
-- `GET /api/blockchain/balance/:address` — ETH balance
+### SMA (Sovereign Multi-Industry)
+- `sma-trial`: Rp 0
+- `sma-starter`: Rp 299.000
+- `sma-pro`: Rp 799.000
+- `sma-enterprise`: Rp 1.999.000
 
-### Tokenomics
-- `GET /api/tokenomics/hypha` — $HYPHA token data
-- `GET /api/tokenomics/premalta` — $PREMALTA token data (Base)
-- `GET /api/market/prices` — Live token prices
+### SB (Sovereign Barber)
+- `sb-trial`: Rp 0
+- `sb-starter`: Rp 299.000
+- `sb-pro`: Rp 799.000
+- `sb-empire`: Rp 1.999.000
 
-### IPFS
-- `POST /api/ipfs/pin` — Pin JSON to IPFS (Pinata)
-- `GET /api/ipfs/list` — List pinned files
+### SL (Sovereign Legacy)
+- `sl-trial`: Rp 0
+- `sl-starter`: Rp 299.000
+- `sl-pro`: Rp 799.000
+- `sl-forever`: Rp 1.999.000
 
-### Supabase (CRUD)
-- `GET /api/supabase/users` — User profiles
-- `GET /api/supabase/revenue` — Revenue streams
-- `GET /api/supabase/status` — DB connection status
-- `GET /api/supabase/transactions` — Transaction history
-- `GET/POST /api/supabase/services` — Micro services
-- `GET/POST /api/supabase/build-logs` — Build in Public feed
-- `GET /api/supabase/analytics` — Platform analytics
+## 🏗️ Tech Stack
 
-### DAO
-- `GET /api/dao/proposals` — Governance proposals
-- `POST /api/dao/vote` — Cast vote
-- `GET /api/economy/overview` — Full economy status
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 19 + TypeScript + TailwindCSS (PostCSS) |
+| **Backend** | Hono v4 + Cloudflare Workers |
+| **AI/LLM** | Groq llama-3.3-70b-versatile (15s timeout) |
+| **Database** | Supabase PostgreSQL (16 tables, RLS) |
+| **Payments** | Duitku POP v2 (QRIS, GoPay, OVO) |
+| **Blockchain** | Alchemy (ETH/Base/Polygon/Arb) |
+| **Storage** | Pinata/IPFS |
+| **Deploy** | Cloudflare Pages (247 PoPs global) |
+| **Build** | Vite 6 + manual chunking |
 
----
+## 🐛 Root Cause Analysis — MSHH ERROR
 
-## 💰 Revenue Streams (9 Active)
+### Symptom
+- CSS raw code muncul di layar (CSS dump)
+- Blank screen / freeze saat navigasi
+- App crash tanpa pesan error
 
-| Stream | Layer | Status | Target M12 |
-|--------|-------|--------|-----------|
-| SaaS Subscriptions | Web2 | Building | $120K/mo |
-| API Marketplace | Web2 | Building | $80K/mo |
-| DeFi Yield | Web3 | Building | $55K/mo |
-| Token Economics | Web3 | Building | $40K/mo |
-| NFT Commerce | Web3 | Planned | $30K/mo |
-| AI Pod Deployment | Web4 | Building | $100K/mo |
-| DAO Treasury | Web4 | Planned | $25K/mo |
-| DWN Protocol | Web5 | Planned | $20K/mo |
-| RPC Node | Web5 | Planned | $28K/mo |
+### Root Causes Found & Fixed
 
-**Year 1 Target: $498K/mo ARR**
+| # | Root Cause | Severity | Fix |
+|---|-----------|----------|-----|
+| 1 | React Hooks Violation (useState after conditional return) | 🔴 CRITICAL | Pindahkan semua hooks ke atas, buat PublicPages component |
+| 2 | Tidak ada ErrorBoundary | 🔴 CRITICAL | AppErrorBoundary di semua level |
+| 3 | Groq fetch tanpa timeout (9 calls) | 🟠 HIGH | groqFetch() + AbortController 15s |
+| 4 | Blank screen saat pertama load | 🟡 MEDIUM | Native #app-loading HTML screen |
+| 5 | window.location.href (full reload) | 🟡 MEDIUM | history.pushState + PopStateEvent |
+| 6 | index.html duplikat tags (sebelumnya) | 🟡 MEDIUM | Fixed - 1 clean HTML file |
+| 7 | Main bundle 794KB | 🟡 MEDIUM | Lazy loading + 15+ manual chunks → 20KB |
 
----
+## 📊 Performance Results
 
-## 🪙 Tokens
+| Metric | Before | After |
+|--------|--------|-------|
+| Main bundle | 794 KB | 20.19 KB (-97%) |
+| TTFB | - | **0.1s** |
+| Groq timeout | ∞ | 15s max |
+| Error recovery | None | ErrorBoundary at every level |
+| Loading screen | Blank | Native animated loader |
 
-### $PREMALTA (Base Network)
-- **Contract:** `0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7`
-- **Platform:** Paragraph.com (Creator Economy)
-- **Network:** Base (Chain ID: 8453)
-- **Supply:** 1,000,000,000
-- **Status:** Deployed — needs liquidity pool
-- **BaseScan:** https://basescan.org/address/0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7
-
-### $HYPHA
-- **Network:** Ethereum (pending mainnet deployment)
-- **Total Supply:** 1,000,000,000
-- **Staking APY:** 18.5%
-
----
-
-## 🗄️ Supabase Database (9 Tables)
-
-| Table | Purpose |
-|-------|---------|
-| `user_profiles` | User accounts + RBAC roles |
-| `revenue_streams` | 9 income stream tracking |
-| `micro_services` | Service marketplace |
-| `deployed_pods` | AI agent deployments |
-| `dao_proposals` | Governance proposals |
-| `transactions` | On-chain transaction log |
-| `build_public_logs` | Build in Public updates |
-| `subscriptions` | SaaS subscriptions |
-| `platform_analytics` | Daily metrics |
-
----
-
-## 🚀 Quick Start (Development)
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Setup environment (copy .dev.vars with your keys)
-# Already configured with all 12 APIs
-
-# 3. Build
-npm run build
-
-# 4. Start local dev server
-pm2 start ecosystem.config.cjs
-
-# 5. Test
-curl http://localhost:3000/api/health
-curl http://localhost:3000/api/credentials/check
-```
-
----
-
-## 📦 Deployment (Cloudflare Pages)
+## 🚀 Deployment
 
 ```bash
-# Build + deploy
-npm run deploy
-
-# Or manual:
-export CLOUDFLARE_API_TOKEN="your_token"
+# Deploy to Cloudflare Pages
+export CLOUDFLARE_API_TOKEN="..."
 npm run build
 npx wrangler pages deploy dist --project-name gani-hypha-web3
+
+# Set secrets
+echo "YOUR_KEY" | npx wrangler pages secret put GROQ_API_KEY --project-name gani-hypha-web3
 ```
 
-**Production:** https://gani-hypha-web3.pages.dev  
-**Cloudflare Account:** elmatador0197@gmail.com  
-**Account ID:** a51295a10bce67facf2e15cb66293a7e
+## 📅 Session History
+
+| Session | Summary |
+|---------|---------|
+| #036 | Fix Groq 401, Tailwind CDN → PostCSS, bundle optimization |
+| #039 | Add Sovereign Barber, Sovereign Legacy, routing fixes |
+| #040 | Ultra deep fix: index.html duplicates, lazy loading, chunk splitting |
+| #040b | Non-blocking fonts, Cloudflare cache headers |
+| **#041** | **MSHH ERROR FIX: Hooks violation, ErrorBoundary, Groq timeout, native loader** |
 
 ---
-
-## 🎯 SCA Revenue Engine
-
-**Sovereign Contract Analyst** — AI-powered property contract analysis
-
-- **Basic:** Rp 149K/mo ($9) — 3 analyses/mo
-- **Professional:** Rp 499K/mo ($30) — 15 analyses/mo  
-- **Enterprise:** Rp 1.499K/mo ($90) — 50 analyses/mo
-
-**API:** `POST /api/sca/analyze`  
-Powered by Groq llama-3.3-70b — analyzes Indonesian property law contracts.
-
----
-
-## 📋 Bootstrap Path ($500 USDC)
-
-1. **Today** → SCA live + Groq connected → first client
-2. **Week 1** → 3-5 SCA clients @ Rp 499K = ~$150 USD
-3. **Week 2** → Apply Base Builder Grant (up to $5K)
-4. **Month 1** → $300 USDC → Uniswap V3 PREMALTA/USDC pool
-5. **Month 2** → Token tradeable → community growth
-6. **Month 3** → 10 enterprise pod clients = $5K+/mo
-
----
-
-## 📈 Roadmap
-
-| Phase | Timeline | Milestone |
-|-------|----------|-----------|
-| Phase 0 | ✅ Done | Platform built, all APIs connected |
-| Phase 1 | Feb-Apr 2026 | 1,000 early adopters, first revenue |
-| Phase 2 | May-Aug 2026 | 10K users, $50K/mo |
-| Phase 3 | Sep-Dec 2026 | 50K MAU, $5M ARR |
-
----
-
-## 📄 Documentation
-
-| Doc | Location |
-|-----|---------|
-| PRD | `/docs/PRD.md` |
-| Architecture | `/docs/MASTER_ARCHITECTURE.md` |
-| Design Doc | `/docs/MASTER_DESIGN_DOC_V2.md` |
-| TODO | `/docs/MASTER_TODO_V2.md` |
-| GAP Analysis | `/docs/GAP_ANALYSIS.md` |
-| Current State | `/docs/CURRENT_STATE.md` |
-| Revenue Strategy | `/docs/REVENUE_STRATEGY_REAL.md` |
-| Foundation Clarity | `/docs/FOUNDATION_MASTER_CLARITY.md` |
-
----
-
-*Last Updated: 2026-02-25 | Version 5.2.0 | Gyss! 🙏🏻*
+*Last updated: Session #041 — 2026-02-28*  
+*Status: ✅ DEPLOYED & OPERATIONAL*
