@@ -1,5 +1,7 @@
-/* Custom styles - Tailwind CSS served via CDN in index.html */
+/* ✅ GANI HYPHA — PostCSS Tailwind (bukan CDN) untuk faster loading */
+@import "tailwindcss";
 
+/* ✅ FIX: Hapus overflow:hidden dari body — ini yang menyebabkan landing pages tidak bisa scroll! */
 * {
   box-sizing: border-box;
 }
@@ -8,6 +10,67 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: #020617;
   color: #f8fafc;
-  overflow: hidden;
+  /* NO overflow:hidden — landing pages butuh scroll! */
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+.font-mono { font-family: 'JetBrains Mono', monospace !important; }
+
+.glass {
+  background: rgba(15,23,42,0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.shadow-3xl { box-shadow: 0 35px 60px -15px rgba(0,0,0,0.6); }
+
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(15,23,42,0.2); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4f46e5; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes pulse-indigo {
+  0% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(99,102,241,0); }
+  100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+}
+.pulse-btn { animation: pulse-indigo 2s infinite; }
+
+.blueprint-card:hover .quick-specs { transform: translateY(0); opacity: 1; }
+.quick-specs { transform: translateY(10px); opacity: 0; transition: all 0.3s ease; }
+
+.animate-in { animation-fill-mode: both; }
+.fade-in { animation: fadeIn 0.5s ease; }
+.slide-in-from-bottom-4 { animation: slideInBottom4 0.5s ease; }
+.slide-in-from-bottom-8 { animation: slideInBottom8 0.7s ease; }
+.slide-in-from-right-4 { animation: slideInRight4 0.5s ease; }
+.slide-in-from-left-4 { animation: slideInLeft4 0.5s ease; }
+.zoom-in-95 { animation: zoomIn95 0.5s ease; }
+.duration-300 { animation-duration: 0.3s; }
+.duration-500 { animation-duration: 0.5s; }
+.duration-700 { animation-duration: 0.7s; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideInBottom4 { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInBottom8 { from { opacity: 0; transform: translateY(2rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInRight4 { from { opacity: 0; transform: translateX(1rem); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideInLeft4 { from { opacity: 0; transform: translateX(-1rem); } to { opacity: 1; transform: translateX(0); } }
+@keyframes zoomIn95 { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+/* ✅ Page transition animation */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: pageFadeIn 0.25s ease forwards; }
+
+/* Shepherd.js tour */
+.shepherd-element { background: #0f172a !important; border: 1px solid #334155 !important; border-radius: 1.5rem !important; }
+.shepherd-title { color: #f8fafc !important; font-weight: 800 !important; text-transform: uppercase !important; }
+.shepherd-text { color: #94a3b8 !important; }
+.shepherd-button { background: #4f46e5 !important; color: white !important; border-radius: 0.75rem !important; font-weight: 700 !important; }
+.shepherd-arrow:before { background: #0f172a !important; border: 1px solid #334155 !important; }
