@@ -7,29 +7,73 @@
     <meta name="description" content="GANI HYPHA — AI Agent Marketplace untuk bisnis Indonesia. SICA, SHGA, SCA, SMA, BDE, SL. Bayar via QRIS/GoPay. Aktif dalam menit!">
     <meta property="og:title" content="GANI HYPHA — AI Agent Marketplace">
     <meta property="og:description" content="Platform AI Agent siap pakai untuk bisnis Indonesia. Otomatisasi operasional dengan SICA, SHGA, SCA, SMA, BDE, SL.">
+    <meta property="og:type" content="website">
     <meta name="theme-color" content="#020617">
-    <!-- Preconnect untuk faster external resource loading -->
+    <!-- DNS Prefetch untuk faster external resource loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://api.groq.com">
+    <link rel="dns-prefetch" href="https://drhitwkbkdnnepnnqbmo.supabase.co">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>">
     <!-- Google Fonts NON-BLOCKING: media=print onload trick → tidak block render -->
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap"></noscript>
     <style>
-      * { box-sizing: border-box; }
+      /* ── Critical CSS: render blocking minimum ── */
+      *, *::before, *::after { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
       body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background-color: #020617;
         color: #f8fafc;
         margin: 0;
+        padding: 0;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        /* Tidak overflow:hidden global — landing pages butuh scroll! */
       }
-      /* App layout: overflow hidden hanya untuk app context (bukan landing pages) */
+      /* App layout hanya untuk halaman utama (bukan landing pages) */
       #root > div[data-app-layout="true"] {
         overflow: hidden;
         height: 100vh;
       }
+      /* ── Loading Screen sebelum React hydrate ── */
+      #app-loading {
+        position: fixed;
+        inset: 0;
+        background: #020617;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        gap: 12px;
+        transition: opacity 0.3s ease;
+      }
+      #app-loading.hidden { opacity: 0; pointer-events: none; }
+      #app-loading .logo {
+        width: 52px; height: 52px;
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        border-radius: 16px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 26px;
+        animation: appPulse 1.2s ease-in-out infinite;
+        box-shadow: 0 0 30px rgba(99,102,241,0.4);
+      }
+      #app-loading .brand { font-size: 15px; font-weight: 900; letter-spacing: 2px; color: #fff; }
+      #app-loading .dots { display: flex; gap: 6px; }
+      #app-loading .dot {
+        width: 6px; height: 6px;
+        background: #6366f1;
+        border-radius: 50%;
+        animation: dotBounce 0.8s ease-in-out infinite;
+      }
+      #app-loading .dot:nth-child(2) { animation-delay: 0.12s; background: #8b5cf6; }
+      #app-loading .dot:nth-child(3) { animation-delay: 0.24s; background: #a855f7; }
+      #app-loading .tagline { font-size: 11px; color: #475569; letter-spacing: 0.5px; }
+      @keyframes appPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+      @keyframes dotBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+      /* ── Utility classes ── */
       .font-mono { font-family: 'JetBrains Mono', monospace !important; }
       .glass {
         background: rgba(15,23,42,0.7);
@@ -68,12 +112,9 @@
       @keyframes slideInRight4 { from { opacity: 0; transform: translateX(1rem); } to { opacity: 1; transform: translateX(0); } }
       @keyframes slideInLeft4 { from { opacity: 0; transform: translateX(-1rem); } to { opacity: 1; transform: translateX(0); } }
       @keyframes zoomIn95 { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-      @keyframes pageFadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
+      @keyframes pageFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       .page-enter { animation: pageFadeIn 0.25s ease forwards; }
-      /* Shepherd.js custom styles */
+      /* ── Shepherd.js custom styles ── */
       .shepherd-element { background: #0f172a !important; border: 1px solid #334155 !important; border-radius: 1.5rem !important; }
       .shepherd-title { color: #f8fafc !important; font-weight: 800 !important; text-transform: uppercase !important; }
       .shepherd-text { color: #94a3b8 !important; }
@@ -82,7 +123,32 @@
     </style>
 </head>
 <body>
+    <!-- ✅ Native loading screen sebelum React mount — eliminasi blank screen pertama kali -->
+    <div id="app-loading">
+      <div class="logo">🧬</div>
+      <div class="brand">GANI HYPHA</div>
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="tagline">Memuat AI Agent Marketplace...</div>
+    </div>
+
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- ✅ Hide loading screen setelah React mount -->
+    <script>
+      // Hide native loading when React is ready
+      window.__hideAppLoading = function() {
+        var el = document.getElementById('app-loading');
+        if (el) {
+          el.classList.add('hidden');
+          setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+        }
+      };
+    </script>
 </body>
 </html>

@@ -97,6 +97,52 @@ let _sbSecretKey = ''
 // (akan '' jika belum di-set via middleware, yang menyebabkan Supabase error gracefully)
 const SB_ANON = '' // Deprecated: gunakan env vars via c.env
 
+// ============================================================
+// ✅ GROQ FETCH HELPER — dengan AbortController timeout
+// Mencegah hanging/freeze jika Groq API lambat
+// ============================================================
+async function groqFetch(
+  apiKey: string,
+  messages: { role: string; content: string }[],
+  opts: { model?: string; max_tokens?: number; temperature?: number; timeout?: number } = {}
+): Promise<string> {
+  const {
+    model = 'llama-3.3-70b-versatile',
+    max_tokens = 512,
+    temperature = 0.7,
+    timeout = 15000 // 15 detik timeout
+  } = opts;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ model, messages, max_tokens, temperature }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const errTxt = await res.text();
+      throw new Error(`Groq ${res.status}: ${errTxt.substring(0, 200)}`);
+    }
+    const data = await res.json() as { choices?: { message?: { content?: string } }[] };
+    return data.choices?.[0]?.message?.content || 'Gyss! Response kosong dari AI.';
+  } catch (e: unknown) {
+    clearTimeout(timer);
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Groq timeout: request melebihi 15 detik');
+    }
+    throw e;
+  }
+}
+
 // ── Supabase Helpers ─────────────────────────────────────────
 // Middleware untuk set Supabase keys dari env ke global state
 // Dipanggil di awal setiap request yang butuh Supabase
@@ -183,26 +229,45 @@ app.use('*', async (c, next) => {
 // SECTION 1: PLATFORM STATUS
 // ══════════════════════════════════════════════════════════════
 
+// ✅ Ultra-fast ping endpoint — untuk health check cepat
+app.get('/api/ping', (c) => c.json({ ok: true, ts: Date.now() }))
+
 app.get('/api/health', async (c) => {
-  // Live Supabase check
+  const t0 = Date.now()
+  // Live Supabase check (dengan timeout 5s)
   let sbStatus = 'checking'
   let sbTables: string[] = []
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 5000)
   try {
-    const swg = await fetch(`${SB_URL}/rest/v1/`, { headers: { 'apikey': SB_ANON } })
-    const data = await swg.json()
+    const keys = getSbKeys(c.env as Record<string, string>)
+    const swg = await fetch(`${SB_URL}/rest/v1/`, {
+      headers: { 'apikey': keys.anon || SB_ANON },
+      signal: controller.signal
+    })
+    clearTimeout(timer)
+    const data = await swg.json() as { paths?: Record<string, unknown> }
     sbTables = Object.keys(data.paths || {}).filter((p: string) => p !== '/' && !p.startsWith('/rpc')).map((p: string) => p.replace('/', ''))
     sbStatus = sbTables.includes('user_profiles') ? 'ready' : 'migration_needed'
-  } catch { sbStatus = 'error' }
+  } catch (e) {
+    clearTimeout(timer)
+    sbStatus = e instanceof Error && e.name === 'AbortError' ? 'timeout' : 'error'
+  }
+
+  const hasGroqKey = !!(c.env?.GROQ_API_KEY || c.env?.VITE_GROQ_API_KEY)
 
   return c.json({
     status: 'OK',
-    version: '5.2.0',
+    version: '5.3.0',
     platform: 'GANI HYPHA Autonomous Economy Engine',
     timestamp: new Date().toISOString(),
+    responseTime: `${Date.now() - t0}ms`,
     edge: 'Cloudflare Workers · 247 PoPs',
     stack: ['Hono v4', 'Groq llama-3.3-70b', 'Supabase PostgreSQL', 'Alchemy', 'Pinata IPFS'],
     supabase: { project: 'drhitwkbkdnnepnnqbmo', url: SB_URL, status: sbStatus, tables: sbTables.length },
+    groq: { configured: hasGroqKey, model: 'llama-3.3-70b-versatile', timeout: '15s' },
     tokens: { PREMALTA: '0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7', HYPHA: 'pending_mainnet' },
+    fixes: ['hooks-violation-fixed', 'error-boundary-added', 'groq-timeout-15s', 'css-dump-prevented', 'native-loading-screen'],
     message: 'Akar Dalam, Cabang Tinggi! Gyss! 🙏🏻'
   })
 })
@@ -326,20 +391,20 @@ app.post('/api/deploy', async (c) => {
 app.post('/api/ai/chat', async (c) => {
   try {
     const body = await c.req.json()
-    const { message, history, context, blueprintId } = body
+    const { message, history, context } = body
     const groqKey = c.env?.GROQ_API_KEY || c.env?.VITE_GROQ_API_KEY || ''
     if (!message) return c.json({ success: false, error: 'message required' }, 400)
 
     const sysPrompts: Record<string, string> = {
-      onboarding: `Kamu adalah GANI, Universal Concierge HYPHA Web4 Marketplace v5.2. Stack: React 19, Hono, CF Workers, Groq llama-3.3-70b, Supabase, Alchemy. Filosofi: "Akar Dalam, Cabang Tinggi". Gyss! Mix Bahasa Indonesia/English.`,
-      dashboard: `Kamu adalah GANI, Master PM Hypha v5.2. Laporkan node health, profit optimization, Web3 metrics. Supabase RBAC aktif. Tone presisi.`,
+      onboarding: `Kamu adalah GANI, Universal Concierge HYPHA Web4 Marketplace v5.3. Stack: React 19, Hono, CF Workers, Groq llama-3.3-70b, Supabase, Alchemy. Filosofi: "Akar Dalam, Cabang Tinggi". Gyss! Mix Bahasa Indonesia/English.`,
+      dashboard: `Kamu adalah GANI, Master PM Hypha v5.3. Laporkan node health, profit optimization, Web3 metrics. Supabase RBAC aktif. Tone presisi.`,
       strategy: `Kamu adalah GANI, Chief Strategy Officer GANI HYPHA. Revenue: SaaS+API+DeFi+Token+NFT+AIPod+DAO+DWN+RPC. Target $498K/mo by M12. Token: $PREMALTA (Base), $HYPHA. Gyss!`
     }
 
     if (!groqKey) {
       return c.json({
         success: true,
-        response: `Gyss! 😌 GANI v5.2 responding... Platform operational. Real Supabase connected. 9 revenue streams, 6 AI agents. Stack: Groq + CF + Supabase active. Next: Deploy pods → earn. Akar Dalam, Cabang Tinggi! 🙏🏻`,
+        response: `Gyss! 😌 GANI v5.3 responding... Platform operational. 9 revenue streams, 6 AI agents aktif. Stack: CF Workers + Supabase active. Deploy pods → earn. Akar Dalam, Cabang Tinggi! 🙏🏻`,
         model: 'gani-fallback', processingTime: '0ms'
       })
     }
@@ -350,60 +415,58 @@ app.post('/api/ai/chat', async (c) => {
       { role: 'user', content: message }
     ]
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: msgs, temperature: 0.7, max_tokens: 1024 })
-    })
-
-    if (!res.ok) throw new Error(`Groq ${res.status}`)
-    const data = await res.json() as {choices?: {message?: {content?: string}}[]; model?: string; usage?: {total_tokens?: number}}
+    // ✅ Gunakan groqFetch dengan timeout 15s
+    const t0 = Date.now()
+    const response = await groqFetch(groqKey, msgs, { max_tokens: 1024, timeout: 15000 })
     return c.json({
-      success: true, response: data.choices?.[0]?.message?.content || 'Groq interrupted.',
-      model: data.model, usage: data.usage,
-      processingTime: `${data.usage?.total_tokens || 0} tokens`
+      success: true, response,
+      model: 'llama-3.3-70b-versatile',
+      processingTime: `${Date.now() - t0}ms`
     })
   } catch (e) {
-    return c.json({ success: false, response: `GANI fallback: ${String(e)}`, error: String(e) })
+    return c.json({
+      success: true,
+      response: `Gyss! 😌 GANI fallback aktif. ${String(e).includes('timeout') ? 'Groq timeout (>15s), coba lagi.' : 'Koneksi bermasalah, coba lagi.'} Akar Dalam! 🙏🏻`,
+      error: String(e)
+    })
   }
 })
 
 app.post('/api/ai/gani', async (c) => {
-  const { message, context = 'general' } = await c.req.json()
-  const groqKey = c.env?.GROQ_API_KEY || c.env?.VITE_GROQ_API_KEY || ''
+  try {
+    const body = await c.req.json()
+    const message = body?.message || body?.msg || ''
+    const context = body?.context || 'general'
+    const groqKey = c.env?.GROQ_API_KEY || c.env?.VITE_GROQ_API_KEY || ''
 
-  const sysPrompts: Record<string, string> = {
-    general: `Kamu adalah GANI — AI agent GANI HYPHA Web4/Web5. Expert: Web3, DeFi, AI agents, autonomous economy. Stack: React 19, Hono, CF Workers, Groq, Supabase, Alchemy. Token: $PREMALTA (Base), $HYPHA. Bahasa Indonesia. Gyss!`,
-    economy: `Kamu Economy Advisor GANI HYPHA. Bantu maximkan 9 revenue streams. Current MRR: $0 real (building). Target M12: $498K/mo. Bahasa Indonesia.`,
-    web5: `Kamu Web5 Architect GANI HYPHA. Expert DWN, DID, self-sovereign identity. Help achieve data sovereignty. Bahasa Indonesia.`,
-    strategy: `Kamu Strategic Advisor GANI HYPHA. Focus: Web2→Web3→Web4→Web5 migration, token launch, revenue growth, community building. Bahasa Indonesia. Gyss!`
-  }
+    const sysPrompts: Record<string, string> = {
+      general: `Kamu adalah GANI — AI agent GANI HYPHA Web4/Web5. Expert: Web3, DeFi, AI agents, autonomous economy. Stack: React 19, Hono, CF Workers, Groq, Supabase, Alchemy. Token: $PREMALTA (Base), $HYPHA. Bahasa Indonesia. Gyss!`,
+      economy: `Kamu Economy Advisor GANI HYPHA. Bantu maximkan 9 revenue streams. Target M12: $498K/mo. Bahasa Indonesia.`,
+      web5: `Kamu Web5 Architect GANI HYPHA. Expert DWN, DID, self-sovereign identity. Help achieve data sovereignty. Bahasa Indonesia.`,
+      strategy: `Kamu Strategic Advisor GANI HYPHA. Focus: Web2→Web3→Web4→Web5 migration, token launch, revenue growth. Bahasa Indonesia. Gyss!`
+    }
 
-  if (!groqKey) {
+    if (!groqKey || !message) {
+      return c.json({
+        success: true,
+        response: `Halo! GANI v5.3 siap! 🙏🏻\n\n📊 Platform: LIVE\n🗄️ Supabase: Connected\n🌐 CF: 247 PoPs\n🔵 PREMALTA: Base L2\n\nGyss! Akar Dalam, Cabang Tinggi! 🌿`,
+        model: 'fallback', context
+      })
+    }
+
+    // ✅ Gunakan groqFetch dengan timeout 15s
+    const response = await groqFetch(groqKey, [
+      { role: 'system', content: sysPrompts[context] || sysPrompts.general },
+      { role: 'user', content: message }
+    ], { max_tokens: 512, timeout: 15000 })
+
+    return c.json({ success: true, response, model: 'llama-3.3-70b', context })
+  } catch (e) {
     return c.json({
       success: true,
-      response: `Halo! GANI v5.2 siap! 🙏🏻\n\n📊 Platform Status: LIVE\n🗄️ Supabase: Connected (9 tables)\n💰 MRR: $0 real (building phase)\n🌐 CF: 247 PoPs · 99.97% uptime\n🔵 PREMALTA: 0xC0125651...e2C94c7 (Base)\n\nGyss! Akar Dalam, Cabang Tinggi! 🌿`,
-      model: 'fallback', context
+      response: `GANI v5.3 fallback: ${String(e).includes('timeout') ? 'AI timeout, coba lagi dalam 30 detik.' : 'Error sementara, mohon retry.'} Gyss! 🙏🏻`,
+      error: String(e)
     })
-  }
-
-  try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: sysPrompts[context] || sysPrompts.general },
-          { role: 'user', content: message }
-        ],
-        max_tokens: 512, temperature: 0.7
-      })
-    })
-    const data = await res.json() as {choices?: {message?: {content?: string}}[]}
-    return c.json({ success: true, response: data.choices?.[0]?.message?.content || 'Coba lagi.', model: 'llama-3.3-70b', context })
-  } catch (e) {
-    return c.json({ success: false, error: String(e) }, 500)
   }
 })
 

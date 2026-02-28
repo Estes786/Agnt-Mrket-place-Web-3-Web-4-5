@@ -3,19 +3,59 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { BLUEPRINTS } from './constants';
 import { DeployedEcosystem, Blueprint, UserStats } from './types';
+// WalletData type import only
+import type { WalletData } from './components/MetaMaskModal';
 
-// Helper: redirect ke home (harus setelah semua import)
-const RedirectToHome: React.FC = () => <Navigate to="/" replace />;
+// ============================================================
+// ✅ ERROR BOUNDARY — mencegah CSS dump & blank screen fatal
+// ============================================================
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
+class AppErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[GANI ErrorBoundary]', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-8 text-center">
+          <div className="text-5xl mb-4">⚠️</div>
+          <div className="text-xl font-black mb-2 text-red-400">Terjadi Error</div>
+          <div className="text-sm text-slate-400 mb-6 max-w-md">
+            {this.state.error?.message || 'Komponen gagal dimuat'}
+          </div>
+          <button
+            onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/'; }}
+            className="px-6 py-2 bg-indigo-600 rounded-xl text-sm font-bold hover:bg-indigo-500 transition"
+          >
+            🔄 Kembali ke Beranda
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
-// ✅ LAZY LOAD: Semua komponen besar dimuat on-demand untuk bundle kecil
-// Marketplace (1317 baris) dan Dashboard (621 baris) → lazy agar main chunk <200KB
+// ============================================================
+// ✅ LAZY LOAD: Semua komponen besar dimuat on-demand
+// ============================================================
 const Marketplace = lazy(() => import('./components/Marketplace'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const Header = lazy(() => import('./components/Header'));
 const BottomNav = lazy(() => import('./components/BottomNav'));
 
-// ⚡ LAZY LOAD: Heavy components loaded on demand
 const ArchitectMode = lazy(() => import('./components/ArchitectMode'));
 const MediaLab = lazy(() => import('./components/MediaLab'));
 const Roadmap = lazy(() => import('./components/Roadmap'));
@@ -50,10 +90,15 @@ const HOLYYBDLanding = lazy(() => import('./components/HOLYYBDLanding'));
 const PaymentResultPage = lazy(() => import('./components/PaymentResultPage'));
 const SMALanding = lazy(() => import('./components/SMALanding'));
 const MetaMaskModal = lazy(() => import('./components/MetaMaskModal'));
-// WalletData type import only
-import type { WalletData } from './components/MetaMaskModal';
 
-// Loading fallback component
+// ============================================================
+// Helper: redirect ke home
+// ============================================================
+const RedirectToHome: React.FC = () => <Navigate to="/" replace />;
+
+// ============================================================
+// Loading fallback components
+// ============================================================
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
   <div className="flex items-center justify-center h-64 text-gray-500">
     <div className="text-center">
@@ -64,33 +109,43 @@ const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
   </div>
 );
 
-const App: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Public routes yang tidak butuh app layout (sidebar, header, dll)
-  // CRITICAL: semua landing pages dan sovereign pages harus masuk sini agar tidak load full app
-  const isPublicPage = location.pathname.startsWith('/payment') || 
-    location.pathname === '/sca-landing' ||
-    location.pathname === '/sca' ||
-    location.pathname === '/sica-landing' ||
-    location.pathname === '/shga-landing' ||
-    location.pathname === '/bde-landing' ||
-    location.pathname === '/legacy-landing' ||
-    location.pathname === '/sma-landing' ||
-    location.pathname === '/holyybd' ||
-    location.pathname === '/sovereign-barber' ||
-    location.pathname === '/sovereign-legacy' ||
-    location.pathname === '/i' ||
-    // ✅ FIX: Store juga perlu bisa diakses sebagai public page standalone
-    // (user navigate dari landing page via NavLink → pushState)
-    location.pathname === '/store';
+const PublicLoadingFallback: React.FC = () => (
+  <div
+    className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white gap-3"
+    style={{ animation: 'fadeIn 0.1s ease' }}
+  >
+    <div
+      className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-xl"
+      style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', animation: 'pulse 1s ease-in-out infinite' }}
+    >
+      🌿
+    </div>
+    <div className="text-base font-black text-white tracking-wider">GANI HYPHA</div>
+    <div className="flex gap-1.5 mt-1">
+      {[0, 1, 2].map(i => (
+        <div
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-violet-500"
+          style={{ animation: `dotBounce 0.8s ease-in-out ${i * 0.12}s infinite` }}
+        />
+      ))}
+    </div>
+    <p className="text-xs text-slate-500 mt-1">Memuat halaman...</p>
+    <style>{`
+      @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+      @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.05) } }
+      @keyframes dotBounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
+    `}</style>
+  </div>
+);
 
-  // ✅ FIX: Preload landing page chunks on idle untuk eliminasi blank screen
-  // Ini memastikan semua landing pages sudah di-cache saat user pertama kali navigate
-  React.useEffect(() => {
-    const preloadTimer = setTimeout(() => {
-      // Preload semua landing pages secara background
+// ============================================================
+// ✅ PUBLIC PAGES COMPONENT (terpisah, tidak ada hooks violation)
+// ============================================================
+const PublicPages: React.FC = () => {
+  // Preload landing page chunks setelah 1.5s idle
+  useEffect(() => {
+    const timer = setTimeout(() => {
       import('./components/BDELanding');
       import('./components/SCALanding');
       import('./components/SICALanding');
@@ -98,41 +153,12 @@ const App: React.FC = () => {
       import('./components/SovereignLegacyLanding');
       import('./components/SMALanding');
       import('./components/SovereignStore');
-    }, 1500); // Preload setelah 1.5s idle
-    return () => clearTimeout(preloadTimer);
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
-  
-  // ✅ ENHANCED: Loading fallback ultra-fast — muncul <100ms, tidak blank
-  const PublicLoadingFallback = () => (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white gap-3" style={{ animation: 'fadeIn 0.1s ease' }}>
-      <div
-        className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-xl"
-        style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', animation: 'pulse 1s ease-in-out infinite' }}
-      >
-        🌿
-      </div>
-      <div className="text-base font-black text-white tracking-wider">GANI HYPHA</div>
-      <div className="flex gap-1.5 mt-1">
-        {[0,1,2].map(i => (
-          <div
-            key={i}
-            className="w-1.5 h-1.5 rounded-full bg-violet-500"
-            style={{ animation: `bounce 0.8s ease-in-out ${i * 0.12}s infinite` }}
-          />
-        ))}
-      </div>
-      <p className="text-xs text-slate-500 mt-1">Memuat halaman...</p>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.05) } }
-        @keyframes bounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
-      `}</style>
-    </div>
-  );
 
-  // Jika ini public page, render tanpa app layout
-  if (isPublicPage) {
-    return (
+  return (
+    <AppErrorBoundary>
       <Suspense fallback={<PublicLoadingFallback />}>
         <Routes>
           <Route path="/sca" element={<SCALanding />} />
@@ -151,13 +177,21 @@ const App: React.FC = () => {
           <Route path="/payment/failed" element={<PaymentResultPage />} />
           <Route path="/payment/pending" element={<PaymentResultPage />} />
           <Route path="/payment/*" element={<PaymentResultPage />} />
-          {/* Fallback: redirect ke home jika tidak cocok */}
           <Route path="*" element={<RedirectToHome />} />
         </Routes>
       </Suspense>
-    );
-  }
+    </AppErrorBoundary>
+  );
+};
 
+// ============================================================
+// ✅ MAIN APP COMPONENT (semua hooks di atas, tidak ada conditional return sebelum hooks)
+// ============================================================
+const App: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ SEMUA useState/useEffect harus ada di SINI, sebelum conditional render apapun
   const [blueprints, setBlueprints] = useState<Blueprint[]>(BLUEPRINTS);
   const [deployedEcosystems, setDeployedEcosystems] = useState<DeployedEcosystem[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({
@@ -180,6 +214,7 @@ const App: React.FC = () => {
   const [isGaniOpen, setIsGaniOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [deployingIds, setDeployingIds] = useState<string[]>([]);
+  const [isMetaMaskModalOpen, setIsMetaMaskModalOpen] = useState(false);
 
   // Autonomous income simulation
   useEffect(() => {
@@ -202,32 +237,51 @@ const App: React.FC = () => {
         return eco;
       }));
 
-      // Simulate epoch rewards for stakers
       if (userStats.stakedAmount > 0) {
         setUserStats(prev => ({
           ...prev,
-          epochRewards: prev.epochRewards + (prev.stakedAmount * 0.185 / 365 / 24 / 12) // every 5 seconds
+          epochRewards: prev.epochRewards + (prev.stakedAmount * 0.185 / 365 / 24 / 12)
         }));
       }
     }, 5000);
     return () => clearInterval(interval);
   }, [userStats.stakedAmount]);
 
-  // Session #034: Real MetaMask Modal state
-  const [isMetaMaskModalOpen, setIsMetaMaskModalOpen] = useState(false);
+  // ============================================================
+  // ✅ PUBLIC PAGES CHECK — setelah semua hooks
+  // ============================================================
+  const isPublicPage =
+    location.pathname.startsWith('/payment') ||
+    location.pathname === '/sca-landing' ||
+    location.pathname === '/sca' ||
+    location.pathname === '/sica-landing' ||
+    location.pathname === '/shga-landing' ||
+    location.pathname === '/bde-landing' ||
+    location.pathname === '/legacy-landing' ||
+    location.pathname === '/sma-landing' ||
+    location.pathname === '/holyybd' ||
+    location.pathname === '/sovereign-barber' ||
+    location.pathname === '/sovereign-legacy' ||
+    location.pathname === '/i' ||
+    location.pathname === '/store';
 
+  // ✅ Safe conditional render — semua hooks sudah dipanggil di atas
+  if (isPublicPage) {
+    return <PublicPages />;
+  }
+
+  // ============================================================
+  // Handler functions
+  // ============================================================
   const handleConnectWallet = () => {
     if (userStats.isWalletConnected) {
-      // Already connected - show disconnect option
       handleDisconnectWallet();
       return;
     }
-    // Open real MetaMask modal
     setIsMetaMaskModalOpen(true);
   };
 
   const handleWalletConnected = (walletData: WalletData) => {
-    const networkName = walletData.network;
     setUserStats(prev => ({
       ...prev,
       isWalletConnected: true,
@@ -235,7 +289,7 @@ const App: React.FC = () => {
       governancePower: walletData.isVerified ? 120 : 50,
       web3Wallet: {
         address: walletData.address,
-        network: networkName,
+        network: walletData.network,
         balance: walletData.balanceEth,
         nftCount: 0,
         isVerified: walletData.isVerified,
@@ -438,127 +492,143 @@ const App: React.FC = () => {
     setBlueprints(prev => prev.map(b => b.id === updatedBlueprint.id ? updatedBlueprint : b));
   };
 
+  // ============================================================
+  // Main App Layout
+  // ============================================================
   return (
-    <div className="flex min-h-screen bg-[#020617] text-slate-200 overflow-hidden selection:bg-indigo-500/30">
-      <Suspense fallback={<div className="w-16 bg-slate-900" />}>
-        <Sidebar
-          deployedCount={deployedEcosystems.length}
-          isOpen={isSidebarOpen}
-          setIsOpen={setIsSidebarOpen}
-        />
-      </Suspense>
-
-      <div className="flex-1 flex flex-col h-screen relative overflow-hidden">
-        <Suspense fallback={<div className="h-14 bg-slate-900/80 border-b border-slate-800" />}>
-          <Header
-            credits={userStats.hyphaBalance}
-            activePodsCount={deployedEcosystems.length}
-            toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            isWalletConnected={userStats.isWalletConnected}
-            walletAddress={userStats.walletAddress}
-            onConnectWallet={handleConnectWallet}
-            reputationScore={userStats.reputationScore}
-          />
-        </Suspense>
-
-        <main className="flex-1 overflow-y-auto scrollbar-hide pb-24 lg:pb-8 custom-scrollbar">
-          <Suspense fallback={<LoadingSpinner name="page" />}>
-          <Routes>
-            <Route path="/" element={
-              <Marketplace
-                blueprints={blueprints}
-                credits={userStats.hyphaBalance}
-                onDeploy={handlePurchase}
-                onUpdateBlueprint={handleUpdateBlueprint}
-                deployingIds={deployingIds}
-                deployedEcosystems={deployedEcosystems}
-              />
-            } />
-            <Route path="/dashboard" element={
-              <Dashboard
-                ecosystems={deployedEcosystems}
-                blueprints={blueprints}
-                userStats={userStats}
-                onClaimYield={handleClaimYield}
-                onStake={handleStake}
-                onUnstake={handleUnstake}
-              />
-            } />
-            <Route path="/architect" element={<ArchitectMode onSaveBlueprint={handleSaveBlueprint} />} />
-            <Route path="/media-lab" element={<MediaLab />} />
-            <Route path="/roadmap" element={<Roadmap />} />
-            <Route path="/web3" element={<Web3Panel userStats={userStats} onConnectWallet={handleConnectWallet} />} />
-            <Route path="/tokenomics" element={
-              <Tokenomics
-                hyphaBalance={userStats.hyphaBalance}
-                stakedAmount={userStats.stakedAmount}
-                governancePower={userStats.governancePower}
-              />
-            } />
-            <Route path="/dapps" element={
-              <DAppsHub
-                hyphaBalance={userStats.hyphaBalance}
-                ethBalance={userStats.ethBalance}
-              />
-            } />
-            <Route path="/dao" element={
-              <DAOGovernance
-                userStats={userStats}
-                onStake={handleStake}
-                onUnstake={handleUnstake}
-              />
-            } />
-            <Route path="/identity" element={
-              <Web3Identity
-                userStats={userStats}
-                onConnectWallet={handleConnectWallet}
-                onDisconnect={handleDisconnectWallet}
-              />
-            } />
-            <Route path="/premalta" element={<PremaltaDashboard />} />
-            <Route path="/strategy" element={<StrategyCenter />} />
-            <Route path="/ai-web5" element={
-              <div className="p-4 md:p-6">
-                <AIWeb5Roadmap />
-              </div>
-            } />
-            <Route path="/revenue" element={<RevenueHub />} />
-            <Route path="/tokens" element={<TokenLaunchPad />} />
-            <Route path="/economy" element={<AutonomousEconomy />} />
-            <Route path="/web5" element={<Web5Command />} />
-            <Route path="/master" element={<MasterControl />} />
-            <Route path="/supabase" element={<SupabaseDashboard />} />
-            <Route path="/build" element={<BuildInPublic />} />
-            <Route path="/sca/app" element={<SCA />} />
-            <Route path="/sca" element={<SCA />} />
-            <Route path="/sica" element={<SICA />} />
-            <Route path="/sica/app" element={<SICA />} />
-            <Route path="/shga" element={<SHGA />} />
-            <Route path="/shga/app" element={<SHGA />} />
-            <Route path="/store" element={<SovereignStore />} />
-            <Route path="/sovereign-barber" element={<SovereignBarber />} />
-            <Route path="/sovereign-legacy" element={<SovereignLegacy />} />
-          </Routes>
+    <AppErrorBoundary>
+      <div className="flex min-h-screen bg-[#020617] text-slate-200 overflow-hidden selection:bg-indigo-500/30">
+        <AppErrorBoundary fallback={<div className="w-16 bg-slate-900" />}>
+          <Suspense fallback={<div className="w-16 bg-slate-900" />}>
+            <Sidebar
+              deployedCount={deployedEcosystems.length}
+              isOpen={isSidebarOpen}
+              setIsOpen={setIsSidebarOpen}
+            />
           </Suspense>
-        </main>
+        </AppErrorBoundary>
 
-        <Suspense fallback={null}>
-          <BottomNav activePodsCount={deployedEcosystems.length} />
-        </Suspense>
-        <Suspense fallback={null}>
-          <GaniAssistant isOpen={isGaniOpen} setIsOpen={setIsGaniOpen} />
-        </Suspense>
+        <div className="flex-1 flex flex-col h-screen relative overflow-hidden">
+          <AppErrorBoundary fallback={<div className="h-14 bg-slate-900/80 border-b border-slate-800" />}>
+            <Suspense fallback={<div className="h-14 bg-slate-900/80 border-b border-slate-800" />}>
+              <Header
+                credits={userStats.hyphaBalance}
+                activePodsCount={deployedEcosystems.length}
+                toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                isWalletConnected={userStats.isWalletConnected}
+                walletAddress={userStats.walletAddress}
+                onConnectWallet={handleConnectWallet}
+                reputationScore={userStats.reputationScore}
+              />
+            </Suspense>
+          </AppErrorBoundary>
 
-        {/* Session #034: Real MetaMask Modal */}
-        <Suspense fallback={null}>
-          <MetaMaskModal
-            isOpen={isMetaMaskModalOpen}
-            onClose={() => setIsMetaMaskModalOpen(false)}
-            onConnect={handleWalletConnected}
-          />
-        </Suspense>
+          <main className="flex-1 overflow-y-auto scrollbar-hide pb-24 lg:pb-8 custom-scrollbar">
+            <AppErrorBoundary>
+              <Suspense fallback={<LoadingSpinner name="page" />}>
+                <Routes>
+                  <Route path="/" element={
+                    <Marketplace
+                      blueprints={blueprints}
+                      credits={userStats.hyphaBalance}
+                      onDeploy={handlePurchase}
+                      onUpdateBlueprint={handleUpdateBlueprint}
+                      deployingIds={deployingIds}
+                      deployedEcosystems={deployedEcosystems}
+                    />
+                  } />
+                  <Route path="/dashboard" element={
+                    <Dashboard
+                      ecosystems={deployedEcosystems}
+                      blueprints={blueprints}
+                      userStats={userStats}
+                      onClaimYield={handleClaimYield}
+                      onStake={handleStake}
+                      onUnstake={handleUnstake}
+                    />
+                  } />
+                  <Route path="/architect" element={<ArchitectMode onSaveBlueprint={handleSaveBlueprint} />} />
+                  <Route path="/media-lab" element={<MediaLab />} />
+                  <Route path="/roadmap" element={<Roadmap />} />
+                  <Route path="/web3" element={<Web3Panel userStats={userStats} onConnectWallet={handleConnectWallet} />} />
+                  <Route path="/tokenomics" element={
+                    <Tokenomics
+                      hyphaBalance={userStats.hyphaBalance}
+                      stakedAmount={userStats.stakedAmount}
+                      governancePower={userStats.governancePower}
+                    />
+                  } />
+                  <Route path="/dapps" element={
+                    <DAppsHub
+                      hyphaBalance={userStats.hyphaBalance}
+                      ethBalance={userStats.ethBalance}
+                    />
+                  } />
+                  <Route path="/dao" element={
+                    <DAOGovernance
+                      userStats={userStats}
+                      onStake={handleStake}
+                      onUnstake={handleUnstake}
+                    />
+                  } />
+                  <Route path="/identity" element={
+                    <Web3Identity
+                      userStats={userStats}
+                      onConnectWallet={handleConnectWallet}
+                      onDisconnect={handleDisconnectWallet}
+                    />
+                  } />
+                  <Route path="/premalta" element={<PremaltaDashboard />} />
+                  <Route path="/strategy" element={<StrategyCenter />} />
+                  <Route path="/ai-web5" element={
+                    <div className="p-4 md:p-6">
+                      <AIWeb5Roadmap />
+                    </div>
+                  } />
+                  <Route path="/revenue" element={<RevenueHub />} />
+                  <Route path="/tokens" element={<TokenLaunchPad />} />
+                  <Route path="/economy" element={<AutonomousEconomy />} />
+                  <Route path="/web5" element={<Web5Command />} />
+                  <Route path="/master" element={<MasterControl />} />
+                  <Route path="/supabase" element={<SupabaseDashboard />} />
+                  <Route path="/build" element={<BuildInPublic />} />
+                  <Route path="/sca/app" element={<SCA />} />
+                  <Route path="/sca" element={<SCA />} />
+                  <Route path="/sica" element={<SICA />} />
+                  <Route path="/sica/app" element={<SICA />} />
+                  <Route path="/shga" element={<SHGA />} />
+                  <Route path="/shga/app" element={<SHGA />} />
+                  {/* Fallback redirect */}
+                  <Route path="*" element={<RedirectToHome />} />
+                </Routes>
+              </Suspense>
+            </AppErrorBoundary>
+          </main>
+
+          <AppErrorBoundary fallback={null}>
+            <Suspense fallback={null}>
+              <BottomNav activePodsCount={deployedEcosystems.length} />
+            </Suspense>
+          </AppErrorBoundary>
+
+          <AppErrorBoundary fallback={null}>
+            <Suspense fallback={null}>
+              <GaniAssistant isOpen={isGaniOpen} setIsOpen={setIsGaniOpen} />
+            </Suspense>
+          </AppErrorBoundary>
+
+          <AppErrorBoundary fallback={null}>
+            <Suspense fallback={null}>
+              <MetaMaskModal
+                isOpen={isMetaMaskModalOpen}
+                onClose={() => setIsMetaMaskModalOpen(false)}
+                onConnect={handleWalletConnected}
+              />
+            </Suspense>
+          </AppErrorBoundary>
+        </div>
       </div>
-    </div>
+    </AppErrorBoundary>
   );
 };
 
