@@ -17,6 +17,7 @@ interface Agent {
   color: string;
   bgGradient: string;
   route: string;
+  landingRoute?: string;
   status: 'live' | 'coming_soon' | 'beta';
   category: string;
   plans: Plan[];
@@ -174,6 +175,7 @@ const AGENTS: Agent[] = [
     color: 'amber',
     bgGradient: 'from-amber-600 to-orange-600',
     route: '/shga',
+    landingRoute: '/shga-landing',
     status: 'live',
     category: 'Retail & Gift',
     badge: '🔥 H-32 Lebaran!',
@@ -200,6 +202,7 @@ const AGENTS: Agent[] = [
     color: 'indigo',
     bgGradient: 'from-indigo-600 to-purple-600',
     route: '/sica',
+    landingRoute: '/sica-landing',
     status: 'live',
     category: 'F&B & Catering',
     badge: '🌙 Ramadan Special',
@@ -226,6 +229,7 @@ const AGENTS: Agent[] = [
     color: 'emerald',
     bgGradient: 'from-emerald-600 to-teal-600',
     route: '/sca/app',
+    landingRoute: '/sca-landing',
     status: 'live',
     category: 'Legal & Compliance',
     badge: '⚡ AI-Powered',
@@ -251,16 +255,17 @@ const AGENTS: Agent[] = [
     icon: '👑',
     color: 'violet',
     bgGradient: 'from-violet-600 to-purple-700',
-    route: '/',
-    status: 'coming_soon',
+    route: '/sma-landing',
+    landingRoute: '/sma-landing',
+    status: 'live',
     category: 'Multi-Industry Platform',
-    badge: '🚀 Coming Soon',
+    badge: '🚀 NEW!',
     usedBy: 'Enterprise, multi-bisnis owners',
     features: ['Bundle semua agents', 'Custom agent kombinasi', 'Unified dashboard', 'Cross-agent analytics', 'White-label option', 'B2B reseller program'],
     stats: [
-      { label: 'Agents Tersedia', value: '4+ agents' },
+      { label: 'Agents Bundled', value: '6 agents' },
       { label: 'Industries', value: '10+ vertikal' },
-      { label: 'Target Q2 2026', value: 'Beta launch' }
+      { label: 'Hemat', value: 'Hingga 60%' }
     ],
     plans: [
       { id: 'sma-starter', name: 'SMA Starter Bundle', price: 299000, period: 'bulan', features: ['2 agents pilihan', 'Unified dashboard', 'Basic analytics'] },
@@ -278,6 +283,7 @@ const AGENTS: Agent[] = [
     color: 'amber',
     bgGradient: 'from-amber-700 to-yellow-800',
     route: '/sovereign-barber',
+    landingRoute: '/bde-landing',
     status: 'live',
     category: 'Barbershop Management',
     badge: '🔥 NEW',
@@ -304,6 +310,7 @@ const AGENTS: Agent[] = [
     color: 'violet',
     bgGradient: 'from-violet-800 to-purple-900',
     route: '/sovereign-legacy',
+    landingRoute: '/legacy-landing',
     status: 'live',
     category: 'Family Legacy & Home OS',
     badge: '🔥 NEW',
@@ -405,7 +412,7 @@ const SovereignStore: React.FC = () => {
         {AGENTS.map(agent => (
           <button
             key={agent.id}
-            onClick={() => agent.status !== 'coming_soon' ? navigate(agent.route) : setSelectedAgent(agent)}
+            onClick={() => agent.landingRoute ? navigate(agent.landingRoute) : (agent.status !== 'coming_soon' ? navigate(agent.route) : setSelectedAgent(agent))}
             className={`relative p-4 rounded-2xl border bg-slate-900/80 transition-all hover:scale-[1.02] active:scale-95 ${colorMap[agent.color]}`}
           >
             {agent.badge && (
@@ -567,11 +574,19 @@ const SovereignStore: React.FC = () => {
               {/* CTA Buttons */}
               {agent.status !== 'coming_soon' && (
                 <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t border-slate-700/50">
+                  {agent.landingRoute && (
+                    <button
+                      onClick={() => navigate(agent.landingRoute!)}
+                      className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r ${agent.bgGradient} text-white hover:opacity-90 transition-all active:scale-95`}
+                    >
+                      🚀 Lihat Halaman {agent.shortName} →
+                    </button>
+                  )}
                   <button
                     onClick={() => navigate(agent.route)}
-                    className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r ${agent.bgGradient} text-white hover:opacity-90 transition-all active:scale-95`}
+                    className="flex-1 py-2.5 px-4 rounded-xl font-bold text-sm bg-slate-700 text-white hover:bg-slate-600 transition-all active:scale-95 border border-slate-600"
                   >
-                    {agent.icon} Buka {agent.shortName} Dashboard →
+                    {agent.icon} Buka Dashboard
                   </button>
                   <button
                     onClick={() => setSelectedAgent(agent)}
@@ -626,12 +641,22 @@ const SovereignStore: React.FC = () => {
                 ))}
               </div>
               {selectedAgent.status !== 'coming_soon' ? (
-                <button
-                  onClick={() => { setSelectedAgent(null); navigate(selectedAgent.route); }}
-                  className={`w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r ${selectedAgent.bgGradient} hover:opacity-90`}
-                >
-                  {selectedAgent.icon} Buka {selectedAgent.shortName} →
-                </button>
+                <div className="space-y-2">
+                  {selectedAgent.landingRoute && (
+                    <button
+                      onClick={() => { setSelectedAgent(null); navigate(selectedAgent.landingRoute!); }}
+                      className={`w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r ${selectedAgent.bgGradient} hover:opacity-90`}
+                    >
+                      🚀 Lihat Halaman {selectedAgent.shortName} →
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setSelectedAgent(null); navigate(selectedAgent.route); }}
+                    className="w-full py-3 rounded-xl font-bold text-slate-200 bg-slate-700 hover:bg-slate-600 border border-slate-600"
+                  >
+                    {selectedAgent.icon} Buka {selectedAgent.shortName} Dashboard →
+                  </button>
+                </div>
               ) : (
                 <div className="text-center py-3 bg-slate-800/50 rounded-xl">
                   <p className="text-slate-300 text-sm font-bold">🚀 Coming Soon!</p>

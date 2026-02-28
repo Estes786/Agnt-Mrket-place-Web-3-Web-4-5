@@ -2141,7 +2141,7 @@ app.get('/api/sovereign/status', (c) => {
       { id: 'SHGA', name: 'Sovereign Hamper & Gift Agent', status: 'active', landing: '/shga-landing', app: '/shga', endpoints: ['/api/shga/ai/recommend', '/api/shga/products', '/api/shga/lebaran/countdown'] },
       { id: 'BDE', name: 'Barber Dynasty Engine', status: 'active', landing: '/bde-landing', app: '/sovereign-barber', endpoints: ['/api/bde/style-advisor', '/api/bde/booking', '/api/bde/analytics'] },
       { id: 'SL', name: 'Sovereign Legacy', status: 'active', landing: '/legacy-landing', app: '/sovereign-legacy', endpoints: ['/api/legacy/vault/upload', '/api/legacy/ai/advisor', '/api/legacy/treasury'] },
-      { id: 'SMA', name: 'Sovereign Multi-Industry Agent', status: 'planned', landing: null, app: null, endpoints: [] }
+      { id: 'SMA', name: 'Sovereign Multi-Industry Agent', status: 'active', landing: '/sma-landing', app: '/sma-landing', endpoints: ['/api/payment/create', '/api/payment/plans'] }
     ],
     web25_bridge: {
       status: 'active',
@@ -2617,7 +2617,7 @@ app.get('/api/sovereign/ecosystem', async (c) => {
       { id: 'SHGA', name: 'Sovereign Hamper & Gift Agent', status: 'LIVE', landing: '/shga-landing', category: 'Gifting AI' },
       { id: 'BDE', name: 'Barber Dynasty Engine', status: 'LIVE', landing: '/bde-landing', category: 'Grooming AI' },
       { id: 'SL', name: 'Sovereign Legacy', status: 'LIVE', landing: '/legacy-landing', category: 'Family Tech' },
-      { id: 'SMA', name: 'Sovereign Multi-Industry Agent', status: 'PLANNED', landing: null, category: 'Meta Agent' }
+      { id: 'SMA', name: 'Sovereign Multi-Industry Agent', status: 'LIVE', landing: '/sma-landing', category: 'Meta Agent' }
     ],
     revenue_model: {
       primary: 'SaaS subscription (IDR)',
@@ -2837,9 +2837,18 @@ const SUBSCRIPTION_PLANS: Record<string, { name: string; amount: number; agent: 
   'sl-sovereign': { name: 'SL Sovereign Family', amount: 1499000, agent: 'SCA', description: 'White-label extended family, custom contracts, institutional vault, governance rights' },
   // SMA Plans (Sovereign Multi-Industry Agent — Meta Platform)
   'sma-trial': { name: 'SMA Trial', amount: 0, agent: 'SMA', description: 'Coba SMA gratis 7 hari — akses semua agent dasar + 1 bundle custom' },
-  'sma-starter': { name: 'SMA Starter Bundle', amount: 499000, agent: 'SMA', description: 'Bundle 2 agent (pilih SCA+SICA atau SHGA+BDE), unified dashboard, cross-agent analytics' },
-  'sma-pro': { name: 'SMA Professional', amount: 999000, agent: 'SMA', description: 'Bundle semua agent + SovereignLegacy, Priority AI, unified analytics, API access, custom kombinasi' },
-  'sma-enterprise': { name: 'SMA Enterprise', amount: 2999000, agent: 'SMA', description: 'Full Sovereign Ecosystem, white-label, custom agent training, dedicated AM, SLA 24/7' },
+  'sma-starter': { name: 'SMA Starter Bundle', amount: 299000, agent: 'SMA', description: 'Bundle 2 agent (pilih SCA+SICA atau SHGA+BDE), unified dashboard, cross-agent analytics' },
+  'sma-pro': { name: 'SMA Pro Bundle', amount: 799000, agent: 'SMA', description: 'Bundle semua agent + SovereignLegacy, Priority AI, unified analytics, API access, custom kombinasi' },
+  'sma-enterprise': { name: 'SMA Enterprise', amount: 1999000, agent: 'SMA', description: 'Full Sovereign Ecosystem, white-label, custom agent training, dedicated AM, SLA 24/7' },
+  // SB Plans (Sovereign Barber Agent)
+  'sb-trial': { name: 'SB Trial', amount: 0, agent: 'SB', description: 'Coba Sovereign Barber gratis 7 hari — 10 booking, AI Style Advisor 5x' },
+  'sb-starter': { name: 'Starter Chair', amount: 299000, agent: 'SB', description: '50 booking/bulan, Style Vault 5 klien, AI Style Advisor 20x, Inventori tracking' },
+  'sb-pro': { name: 'Sovereign Node', amount: 799000, agent: 'SB', description: 'Booking UNLIMITED, Style Vault UNLIMITED, AI Unlimited, $HYPHA rewards, WhatsApp auto-reply' },
+  'sb-empire': { name: 'Dynasty Empire', amount: 1999000, agent: 'SB', description: 'Multi-barber & multi-cabang, Custom NFT badges, GANI Store integration, Analytics BI dashboard' },
+  // SL Store Plans (align dengan SovereignStore UI — berbeda dari SovereignLegacyLanding)
+  'sl-starter': { name: 'Sanctuary Starter', amount: 299000, agent: 'SL', description: '10 dokumen vault, IPFS 100MB, AES-256 enkripsi, Home OS 20 tugas' },
+  'sl-pro': { name: 'Sovereign Sanctuary', amount: 799000, agent: 'SL', description: 'Vault UNLIMITED, Web5 DID + DWN, Family Treasury, Succession rules, $HYPHA staking' },
+  'sl-forever': { name: 'Legacy Forever', amount: 1999000, agent: 'SL', description: 'IPFS UNLIMITED, Smart contract suksesi, ZKP Security, Multi-sig wallet, IoT Home bridge' },
 }
 
 // POST /api/payment/create — Buat transaksi pembayaran Duitku POP v2
