@@ -9,6 +9,7 @@
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 interface Plan {
   id: string;
@@ -449,6 +450,13 @@ const SHGALanding: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="shga"
+        onCtaClick={() => setSelectedPlan(PLANS[1])}
+        ctaLabel="Mulai Sekarang"
+      />
+
       {/* ── HEADER ───────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-gray-950/90 backdrop-blur border-b border-gray-800">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -670,20 +678,7 @@ const SHGALanding: React.FC = () => {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────── */}
-      <footer className="border-t border-gray-800 py-8">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-gray-500 text-sm">
-          <div className="flex items-center gap-2">
-            <span>🎁</span>
-            <span>SHGA — Part of <a href="https://gani-hypha-web3.pages.dev" className="text-amber-400 hover:text-amber-300">GANI HYPHA</a> Sovereign Ecosystem</span>
-          </div>
-          <div className="flex gap-6">
-            <a href="/sca" className="hover:text-white transition-colors">SCA</a>
-            <a href="/sica" className="hover:text-white transition-colors">SICA</a>
-            <a href="/" className="hover:text-white transition-colors">Platform</a>
-          </div>
-          <div>Akar Dalam, Cabang Tinggi 🙏🏻</div>
-        </div>
-      </footer>
+      <SovereignFooter currentAgent="shga" agentIcon="🎁" agentColor="text-amber-400 hover:text-amber-300" />
 
       {selectedPlan && <PaymentModal plan={selectedPlan} onClose={() => setSelectedPlan(null)} />}
     </div>

@@ -73,10 +73,24 @@ const App: React.FC = () => {
     location.pathname === '/sma-landing' ||
     location.pathname === '/holyybd';
   
+  // Loading fallback yang lebih smooth - tidak blank, tidak lama
+  const PublicLoadingFallback = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 text-white gap-4">
+      <div className="text-4xl animate-pulse">🌿</div>
+      <div className="text-lg font-bold text-white">GANI HYPHA</div>
+      <div className="flex gap-1.5">
+        {[0,1,2].map(i => (
+          <div key={i} className="w-2 h-2 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+        ))}
+      </div>
+      <p className="text-sm text-gray-500">Memuat halaman...</p>
+    </div>
+  );
+
   // Jika ini public page, render tanpa app layout
   if (isPublicPage) {
     return (
-      <Suspense fallback={<div className="flex items-center justify-center h-screen bg-gray-950 text-white">Loading...</div>}>
+      <Suspense fallback={<PublicLoadingFallback />}>
         <Routes>
           <Route path="/sca" element={<SCALanding />} />
           <Route path="/sca-landing" element={<SCALanding />} />

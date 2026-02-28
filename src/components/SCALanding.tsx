@@ -7,6 +7,7 @@
 // ============================================================
 
 import React, { useState } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 interface PaymentForm {
   plan_id: string;
@@ -214,8 +215,14 @@ const SCALanding: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-slate-900 to-gray-950 text-white">
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="sca"
+        onCtaClick={() => handlePlanSelect('sca-pro')}
+        ctaLabel="Mulai Sekarang"
+      />
       {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-50 bg-gray-950/90 backdrop-blur border-b border-white/10">
+      <nav className="sticky top-0 z-40 bg-gray-950/90 backdrop-blur border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">📄</span>
@@ -708,20 +715,7 @@ const SCALanding: React.FC = () => {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-gray-800 py-8 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-gray-400">
-            <span className="text-xl">📄</span>
-            <span className="text-sm">SCA — Sovereign Contract Analyst</span>
-          </div>
-          <div className="text-xs text-gray-500">
-            Part of <span className="text-violet-400">GANI HYPHA</span> Sovereign Ecosystem · v1.0
-          </div>
-          <div className="text-xs text-gray-500">
-            © 2026 GANI HYPHA. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <SovereignFooter currentAgent="sca" agentIcon="⚖️" agentColor="text-blue-400 hover:text-blue-300" />
     </div>
   );
 };

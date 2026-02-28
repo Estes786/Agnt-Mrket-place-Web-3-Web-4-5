@@ -227,20 +227,27 @@ const SovereignLegacyLanding: React.FC = () => {
   return (
     <div className="min-h-screen font-sans" style={{ background: '#0a0a0a', color: '#F5F5DC', fontFamily: "'Inter', sans-serif" }}>
 
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="legacy"
+        onCtaClick={() => setPaymentModal({ open: true, plan: 'Sanctuary Starter', price: 299000, planId: 'sl-starter' })}
+        ctaLabel="Mulai Sekarang"
+      />
+
       {/* Top Banner */}
       <div style={{ background: 'linear-gradient(90deg, #1a0a00, #2a1500, #1a0a00)', borderBottom: '1px solid #D4AF3744' }} className="py-2 px-4 text-center">
         <span style={{ color: '#D4AF37' }} className="text-sm font-semibold">
-          🛡️ SOVEREIGN LEGACY — Amankan Warisan Digital Keluarga Anda · {warRoom.percentage > 0 ? `Progress: ${warRoom.percentage}%` : 'Bergabung Session #033'}
+          🛡️ SOVEREIGN LEGACY — Amankan Warisan Digital Keluarga Anda · {warRoom.percentage > 0 ? `Progress: ${warRoom.percentage}%` : 'Bergabung sekarang!'}
         </span>
       </div>
 
       {/* Header Nav */}
-      <nav style={{ background: '#111111', borderBottom: '1px solid #D4AF3722' }} className="sticky top-0 z-50 flex justify-between items-center px-4 md:px-8 py-3 md:py-4">
+      <nav style={{ background: '#111111', borderBottom: '1px solid #D4AF3722' }} className="sticky top-0 z-40 flex justify-between items-center px-4 md:px-8 py-3 md:py-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ background: 'linear-gradient(135deg, #D4AF37, #8B6914)' }}>🏛️</div>
           <div>
             <div className="font-bold text-base md:text-xl" style={{ fontFamily: "'Playfair Display', serif", color: '#D4AF37' }}>Sovereign Legacy</div>
-            <div className="text-xs" style={{ color: '#9CA3AF' }}>by GANI HYPHA · Web5 Family Vault · Session #033</div>
+            <div className="text-xs" style={{ color: '#9CA3AF' }}>by GANI HYPHA · Web5 Family Vault</div>
           </div>
         </div>
         <div className="hidden md:flex items-center gap-6 text-sm">
@@ -686,6 +693,8 @@ const SovereignLegacyLanding: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Sovereign Footer Navigation */}
+      <SovereignFooter currentAgent="legacy" agentIcon="🏛️" agentColor="text-purple-400 hover:text-purple-300" />
     </div>
   );
 };

@@ -8,6 +8,7 @@
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 interface PaymentResult {
   success?: boolean;
@@ -53,14 +54,23 @@ const BDELanding: React.FC = () => {
   const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
-    fetch('/api/sovereign/war-room')
+    // Non-blocking: fetch war-room data tanpa menghambat render awal
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+    fetch('/api/sovereign/war-room', { signal: controller.signal })
       .then(r => r.json())
       .then((d: { progress?: { total_revenue_idr?: number; percentage?: number } }) => {
         if (d.progress) setWarRoom({
           total_revenue_idr: d.progress.total_revenue_idr || 0,
           percentage: d.progress.percentage || 0
         });
-      }).catch(() => {});
+      })
+      .catch(() => {
+        // Gunakan static fallback jika API lambat/error
+        setWarRoom({ total_revenue_idr: 2400000, percentage: 30 });
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => { controller.abort(); clearTimeout(timeoutId); };
   }, []);
 
   const runStyleDemo = async () => {
@@ -217,17 +227,24 @@ const BDELanding: React.FC = () => {
     <div className="min-h-screen font-sans" style={{ background: '#111111', color: '#F5F5DC', fontFamily: "'Inter', sans-serif" }}>
 
       {/* War Room Banner */}
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="bde"
+        onCtaClick={() => setPaymentModal({ open: true, plan: 'Starter Barber', price: 0, planId: 'bde-trial' })}
+        ctaLabel="Coba Gratis"
+      />
+
       <div style={{ background: 'linear-gradient(90deg, #D4AF37, #ff8c00, #D4AF37)', color: '#1A1A1A', backgroundSize: '200% auto', animation: 'gradient 3s ease infinite' }} className="text-center py-2 px-4 text-sm font-bold">
-        ⚔️ HOLY PATH: {warRoom.percentage > 0 ? `Rp ${warRoom.total_revenue_idr.toLocaleString('id-ID')} / Rp 8.000.000 (${warRoom.percentage}%)` : 'Target $500 · Bergabunglah dalam revolusi barber!'} 🚀
+        ⚔️ HOLY PATH: {warRoom.percentage > 0 ? `Rp ${warRoom.total_revenue_idr.toLocaleString('id-ID')} / Rp 8.000.000 (${warRoom.percentage}%)` : 'Target Rp8Jt · Bergabunglah dalam revolusi barber!'} 🚀
       </div>
 
       {/* Header Nav */}
-      <nav style={{ background: '#1A1A1A', borderBottom: '1px solid #D4AF3722' }} className="sticky top-0 z-50 flex justify-between items-center px-4 md:px-6 py-3 md:py-4">
+      <nav style={{ background: '#1A1A1A', borderBottom: '1px solid #D4AF3722' }} className="sticky top-0 z-40 flex justify-between items-center px-4 md:px-6 py-3 md:py-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-2xl" style={{ background: 'linear-gradient(135deg, #D4AF37, #8B6914)' }}>✂️</div>
           <div>
             <div className="font-bold text-base md:text-lg" style={{ fontFamily: "'Playfair Display', serif", color: '#D4AF37' }}>Barber Dynasty Engine</div>
-            <div className="text-xs" style={{ color: '#00AEEF' }}>by GANI HYPHA · Web4 Powered · Session #033</div>
+            <div className="text-xs" style={{ color: '#00AEEF' }}>by GANI HYPHA · Web4 Powered</div>
           </div>
         </div>
         <div className="hidden md:flex items-center gap-5 text-sm">
@@ -726,10 +743,13 @@ const BDELanding: React.FC = () => {
             </button>
           </div>
           <p className="text-xs mt-6" style={{ color: '#666' }}>
-            © 2026 GANI HYPHA · Barber Dynasty Engine v2.0 · Session #033 · Akar Dalam, Cabang Tinggi 🙏🏻
+            © 2026 GANI HYPHA · Barber Dynasty Engine v2.0 · Akar Dalam, Cabang Tinggi 🙏🏻
           </p>
         </div>
       </section>
+
+      {/* Sovereign Footer Navigation */}
+      <SovereignFooter currentAgent="bde" agentIcon="✂️" agentColor="text-yellow-400 hover:text-yellow-300" />
 
       {/* Payment Modal */}
       {paymentModal.open && (

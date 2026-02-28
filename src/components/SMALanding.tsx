@@ -7,6 +7,7 @@
 // ============================================================
 
 import React, { useState } from 'react';
+import { SovereignNavBar, SovereignFooter } from './LandingNav';
 
 interface PaymentResult {
   success?: boolean;
@@ -176,6 +177,12 @@ const SMALanding: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
+      {/* Sovereign Ecosystem Navigator */}
+      <SovereignNavBar
+        currentAgent="sma"
+        onCtaClick={() => openPayment('sma-pro', 'SMA Professional', 799000)}
+        ctaLabel="Mulai Sekarang"
+      />
       {/* === HERO === */}
       <div className="relative overflow-hidden bg-gradient-to-br from-gray-950 via-emerald-950/30 to-gray-950">
         {/* Glow BG */}
@@ -492,6 +499,8 @@ const SMALanding: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Sovereign Footer */}
+      <SovereignFooter currentAgent="sma" agentIcon="👑" agentColor="text-violet-400 hover:text-violet-300" />
     </div>
   );
 };

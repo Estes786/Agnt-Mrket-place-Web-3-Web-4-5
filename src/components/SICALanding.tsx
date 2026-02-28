@@ -671,20 +671,7 @@ const SICALanding: React.FC = () => {
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
-      <footer className="border-t border-gray-800 py-8">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-gray-500 text-sm">
-          <div className="flex items-center gap-2">
-            <span>🌙</span>
-            <span>SICA — Part of <a href="https://gani-hypha-web3.pages.dev" className="text-emerald-400 hover:text-emerald-300">GANI HYPHA</a> Sovereign Ecosystem</span>
-          </div>
-          <div className="flex gap-6">
-            <a href="/sca" className="hover:text-white transition-colors">SCA</a>
-            <a href="/shga" className="hover:text-white transition-colors">SHGA</a>
-            <a href="/" className="hover:text-white transition-colors">Platform</a>
-          </div>
-          <div>Akar Dalam, Cabang Tinggi 🙏🏻</div>
-        </div>
-      </footer>
+      <SovereignFooter currentAgent="sica" agentIcon="🌙" agentColor="text-emerald-400 hover:text-emerald-300" />
 
       {/* ── PAYMENT MODAL ──────────────────────────────────── */}
       {selectedPlan && (
