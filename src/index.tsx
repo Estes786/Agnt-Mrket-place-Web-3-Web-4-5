@@ -3472,10 +3472,17 @@ app.get('/api/holy/status', async (c) => {
   return c.json({
     success: true,
     page: 'HOLYYBD — Holy Public Documentation',
-    version: '1.0',
-    session: '032',
+    version: '1.4',
+    session: '034',
     url: 'https://gani-hypha-web3.pages.dev/holyybd',
     philosophy: 'Akar Dalam, Cabang Tinggi. Gyss! 🙏🏻',
+    session_034_features: [
+      'MetaMask real wallet connect (ethers.js v6)',
+      'Duitku Production mode ready',
+      'WhatsApp marketing blast endpoint',
+      'Blockchain wallet data endpoint',
+      'PREMALTA token info endpoint',
+    ],
     metrics: {
       growth_targets: { revenue: '+1099%', users: '+500%', agent_roi: '+1000%', token: '+2000%' },
       current_state: {
@@ -3490,7 +3497,7 @@ app.get('/api/holy/status', async (c) => {
     agents: ['SCA', 'SICA', 'SHGA', 'BDE', 'SovereignLegacy', 'SMA'],
     integrations: {
       payment: 'Duitku POP v2 (Merchant: DS28466)',
-      whatsapp: `Fonnte Bot (${FONNTE_PHONE})`,
+      whatsapp: `Fonnte Bot (${FONNTE_PHONE_DEFAULT})`,
       ai: 'Groq llama-3.3-70b',
       database: 'Supabase PostgreSQL (12 tables)',
       blockchain: '$PREMALTA on Base L2',
@@ -3508,24 +3515,324 @@ app.get('/api/holy/status', async (c) => {
 app.get('/api/holy/sessions', (c) => {
   return c.json({
     success: true,
-    total_sessions: 32,
-    completed: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
-    pending: [33, 34, 35, 36, 37, 38],
-    current: 32,
+    total_sessions: 34,
+    completed: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+    pending: [35, 36, 37, 38, 39, 40],
+    current: 34,
     sessions: [
-      { id: 8, title: 'Foundation Layer', status: 'done' },
-      { id: 21, title: 'SICA PRD', status: 'done' },
-      { id: 22, title: 'SHGA PRD', status: 'done' },
-      { id: 26, title: 'SCA + BDE Live', status: 'done' },
-      { id: 29, title: 'Holy 2.5 Upgrade', status: 'done' },
-      { id: 30, title: 'Sovereign Expansion', status: 'done' },
-      { id: 31, title: 'DB Fully Operational', status: 'done' },
-      { id: 32, title: 'HOLYYBD Public Launch', status: 'active' },
-      { id: 33, title: 'Revenue Engine ON', status: 'pending' },
-      { id: 34, title: 'PREMALTA Liquidity', status: 'pending' },
+      { id: 8, title: 'Foundation Layer', status: 'done', date: '2026-02-15' },
+      { id: 21, title: 'SICA PRD', status: 'done', date: '2026-02-20' },
+      { id: 22, title: 'SHGA PRD', status: 'done', date: '2026-02-21' },
+      { id: 26, title: 'SCA + BDE Live', status: 'done', date: '2026-02-23' },
+      { id: 29, title: 'Holy 2.5 Upgrade', status: 'done', date: '2026-02-25' },
+      { id: 30, title: 'Sovereign Expansion', status: 'done', date: '2026-02-25' },
+      { id: 31, title: 'DB Fully Operational', status: 'done', date: '2026-02-26' },
+      { id: 32, title: 'HOLYYBD Public Launch', status: 'done', date: '2026-02-26' },
+      { id: 33, title: 'BDE/Legacy Upgrade + Fonnte/Duitku v2', status: 'done', date: '2026-02-27' },
+      { id: 34, title: 'Production Mode: MetaMask + Duitku Prod + Marketing Blast', status: 'active', date: '2026-02-28' },
+      { id: 35, title: 'PREMALTA Liquidity $300 USDC', status: 'pending' },
+      { id: 36, title: 'Revenue $500 Target Achieved', status: 'pending' },
+      { id: 37, title: '$HYPHA ERC-20 Launch', status: 'pending' },
+      { id: 38, title: 'DAO Governance Live', status: 'pending' },
     ],
+    version: '5.4.0',
+    session_034_deliverables: [
+      '✅ MetaMask real wallet connect (ethers.js v6 via window.ethereum)',
+      '✅ Duitku Production mode endpoint',
+      '✅ WhatsApp marketing blast endpoint',
+      '✅ WhatsApp welcome message endpoint',
+      '✅ Blockchain wallet data endpoint (Alchemy)',
+      '✅ PREMALTA token info endpoint',
+      '✅ Payment stats dashboard endpoint',
+    ]
   })
 })
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: SESSION #034 — PRODUCTION UPGRADES
+// Duitku Production Check + WhatsApp Marketing + MetaMask API
+// Date: February 28, 2026
+// ══════════════════════════════════════════════════════════════
+
+// GET /api/payment/status — Check payment status by order ID
+app.get('/api/payment/status', async (c) => {
+  const env = c.env as Record<string, string>
+  const merchantCode = env.DUITKU_MERCHANT_CODE || 'DS28466'
+  const apiKey = env.DUITKU_API_KEY || '1a1e23321f738017de7e01cb5cdf6f9a'
+  const isSandbox = env.DUITKU_ENV !== 'production'
+  const orderId = c.req.query('orderId') || c.req.query('order_id')
+
+  if (!orderId) {
+    return c.json({ success: false, error: 'orderId query param required' }, 400)
+  }
+
+  const keys = getSbKeys(env)
+  try {
+    const orders = await sbFetch(`payment_orders?order_id=eq.${orderId}&select=*&limit=1`, {}, false, keys)
+    if (Array.isArray(orders) && orders.length > 0) {
+      const o = orders[0] as Record<string, unknown>
+      return c.json({ success: true, source: 'supabase', order: o })
+    }
+  } catch { /* fallback to Duitku API */ }
+
+  try {
+    const timestamp = Date.now()
+    const signature = await duitkuSha256(`${merchantCode}${timestamp}${apiKey}`)
+    const duitkuUrl = isSandbox
+      ? 'https://api-sandbox.duitku.com/api/merchant/transactionStatus'
+      : 'https://api-prod.duitku.com/api/merchant/transactionStatus'
+    const resp = await fetch(duitkuUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-duitku-merchantcode': merchantCode,
+        'x-duitku-timestamp': String(timestamp),
+        'x-duitku-signature': signature,
+      },
+      body: JSON.stringify({ merchantCode, merchantOrderId: orderId })
+    })
+    const data = await resp.json() as Record<string, unknown>
+    return c.json({ success: true, source: 'duitku', env: isSandbox ? 'sandbox' : 'production', data })
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500)
+  }
+})
+
+// GET /api/payment/env — Check Duitku environment config
+app.get('/api/payment/env', (c) => {
+  const env = c.env as Record<string, string>
+  const isSandbox = env.DUITKU_ENV !== 'production'
+  const merchantCode = env.DUITKU_MERCHANT_CODE || 'DS28466'
+  const hasApiKey = !!(env.DUITKU_API_KEY)
+  return c.json({
+    success: true,
+    duitku: {
+      env: isSandbox ? 'sandbox' : 'production',
+      merchant_code: merchantCode,
+      api_key_configured: hasApiKey,
+      api_key_preview: hasApiKey ? `${env.DUITKU_API_KEY.slice(0,8)}...` : 'NOT_SET',
+      active_url: isSandbox
+        ? 'https://api-sandbox.duitku.com/api/merchant/createInvoice'
+        : 'https://api-prod.duitku.com/api/merchant/createInvoice',
+      dashboard: 'https://merchant.duitku.com',
+      warning: isSandbox
+        ? '⚠️ SANDBOX — Pembayaran tidak nyata. Set DUITKU_ENV=production untuk live.'
+        : '✅ PRODUCTION MODE — Pembayaran NYATA!',
+    },
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// GET /api/payment/stats — Aggregate payment stats dari Supabase
+app.get('/api/payment/stats', async (c) => {
+  const env = c.env as Record<string, string>
+  const keys = getSbKeys(env)
+  try {
+    const orders = await sbFetch('payment_orders?select=amount,status,agent,created_at,plan_name', {}, false, keys)
+    if (!Array.isArray(orders)) return c.json({ success: false, error: 'Cannot fetch orders' }, 500)
+    const paid = orders.filter((o: Record<string, unknown>) => o.status === 'SUCCESS' || o.status === 'paid')
+    const totalRevenue = paid.reduce((s: number, o: Record<string, unknown>) => s + (Number(o.amount) || 0), 0)
+    const agentBreakdown: Record<string, number> = {}
+    paid.forEach((o: Record<string, unknown>) => {
+      const agent = String(o.agent || 'Unknown')
+      agentBreakdown[agent] = (agentBreakdown[agent] || 0) + (Number(o.amount) || 0)
+    })
+    return c.json({
+      success: true,
+      stats: {
+        total_orders: orders.length,
+        paid_orders: paid.length,
+        pending_orders: orders.length - paid.length,
+        total_revenue_idr: totalRevenue,
+        total_revenue_usd: parseFloat((totalRevenue / 16000).toFixed(2)),
+        target_usd: 500,
+        target_idr: 8000000,
+        progress_pct: parseFloat(((totalRevenue / 8000000) * 100).toFixed(2)),
+        agent_breakdown: agentBreakdown,
+      },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500)
+  }
+})
+
+// POST /api/whatsapp/marketing-blast — Marketing blast ke multiple kontak
+app.post('/api/whatsapp/marketing-blast', async (c) => {
+  try {
+    const env = c.env as Record<string, string | undefined>
+    const FONNTE_TOKEN = getFonnteToken(env)
+    const body = await c.req.json() as { phones: string[]; message: string; agent?: string; delay_ms?: number }
+    const { phones, message, agent, delay_ms = 800 } = body
+    if (!phones || !Array.isArray(phones) || phones.length === 0)
+      return c.json({ success: false, error: 'phones array required' }, 400)
+    if (!message) return c.json({ success: false, error: 'message required' }, 400)
+    if (phones.length > 100) return c.json({ success: false, error: 'Max 100 nomor per blast' }, 400)
+
+    const results: Array<{ phone: string; status: string; response?: unknown }> = []
+    for (const phone of phones) {
+      try {
+        const resp = await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: phone, message })
+        })
+        const data = await resp.json()
+        results.push({ phone, status: resp.ok ? 'sent' : 'failed', response: data })
+      } catch (e) {
+        results.push({ phone, status: 'error', response: String(e) })
+      }
+      if (delay_ms > 0) await new Promise(r => setTimeout(r, delay_ms))
+    }
+    const sent = results.filter(r => r.status === 'sent').length
+    return c.json({
+      success: true,
+      summary: { total: phones.length, sent, failed: phones.length - sent, agent: agent || 'general' },
+      results,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500)
+  }
+})
+
+// POST /api/whatsapp/welcome — Kirim welcome message ke subscriber baru
+app.post('/api/whatsapp/welcome', async (c) => {
+  try {
+    const env = c.env as Record<string, string | undefined>
+    const FONNTE_TOKEN = getFonnteToken(env)
+    const body = await c.req.json() as { phone: string; name: string; agent: string; plan_name: string }
+    const { phone, name, agent, plan_name } = body
+    if (!phone || !name || !agent) return c.json({ success: false, error: 'phone, name, agent required' }, 400)
+
+    const welcomeMessages: Record<string, string> = {
+      'SICA': `🍽️ Selamat datang di *SICA*, ${name}!\n\nPaket *${plan_name || 'Starter'}* sudah aktif.\n✅ Manajemen pesanan catering otomatis\n✅ AI analisis menu & harga\n\n— Tim GANI HYPHA 🙏🏻`,
+      'SHGA': `🎁 Selamat datang di *SHGA*, ${name}!\n\nPaket *${plan_name || 'Starter'}* sudah aktif.\n✅ Katalog hamper digital\n✅ Rekomendasi AI Lebaran\n\n— Tim GANI HYPHA 🙏🏻`,
+      'BDE': `💈 Selamat datang di *BDE*, ${name}!\n\nPaket *${plan_name || 'Starter'}* sudah aktif.\n✅ Booking system otomatis\n✅ Style advisor AI\n\n— Tim GANI HYPHA 🙏🏻`,
+      'SCA': `📊 Selamat datang di *SCA*, ${name}!\n\nPaket *${plan_name || 'Starter'}* sudah aktif.\n✅ Analisis kontrak AI\n✅ Risk assessment\n\n— Tim GANI HYPHA 🙏🏻`,
+      'default': `👑 Selamat datang di *GANI HYPHA*, ${name}!\n\nPaket *${plan_name || 'Anda'}* sudah aktif.\n\n— Tim GANI HYPHA 🙏🏻`
+    }
+    const welcomeMsg = (welcomeMessages[agent] || welcomeMessages['default']).replace(/\\n/g, '\n')
+    const resp = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: phone, message: welcomeMsg })
+    })
+    const data = await resp.json()
+    return c.json({ success: resp.ok, agent, phone, fonnte_response: data, timestamp: new Date().toISOString() })
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500)
+  }
+})
+
+// GET /api/blockchain/wallet — On-chain wallet data via Alchemy
+app.get('/api/blockchain/wallet', async (c) => {
+  const env = c.env as Record<string, string>
+  const address = c.req.query('address')
+  const chain = c.req.query('chain') || 'base'
+  const alchemyKey = env.ALCHEMY_API_KEY || env.VITE_ALCHEMY_API_KEY || 'TOHei2xGaHxbHUneplEnx-biKQBtdOAq'
+  if (!address || !address.startsWith('0x'))
+    return c.json({ success: false, error: 'Valid Ethereum address required (starts with 0x)' }, 400)
+
+  const rpcUrls: Record<string, string> = {
+    'base': `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`,
+    'eth': `https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`,
+    'polygon': `https://polygon-mainnet.g.alchemy.com/v2/${alchemyKey}`,
+  }
+  const rpcUrl = rpcUrls[chain] || rpcUrls['base']
+  const PREMALTA_CONTRACT = '0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7'
+
+  try {
+    const [balResp, nonceResp, premaltaBalResp] = await Promise.all([
+      fetch(rpcUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [address, 'latest'], id: 1 })
+      }),
+      fetch(rpcUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionCount', params: [address, 'latest'], id: 2 })
+      }),
+      fetch(rpcUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', method: 'eth_call',
+          params: [{ to: PREMALTA_CONTRACT, data: `0x70a08231000000000000000000000000${address.slice(2).toLowerCase().padStart(64,'0')}` }, 'latest'],
+          id: 3
+        })
+      })
+    ])
+    const [balData, nonceData, premaltaData] = await Promise.all([
+      balResp.json() as Promise<{ result?: string }>,
+      nonceResp.json() as Promise<{ result?: string }>,
+      premaltaBalResp.json() as Promise<{ result?: string }>,
+    ])
+    const balanceWei = balData.result ? parseInt(balData.result, 16) : 0
+    const txCount = nonceData.result ? parseInt(nonceData.result, 16) : 0
+    const premaltaBalance = premaltaData.result && premaltaData.result !== '0x'
+      ? parseInt(premaltaData.result, 16) / 1e18 : 0
+
+    return c.json({
+      success: true,
+      address, chain,
+      wallet: {
+        address,
+        balance_eth: parseFloat((balanceWei / 1e18).toFixed(6)),
+        tx_count: txCount,
+        type: 'EOA',
+      },
+      tokens: {
+        PREMALTA: {
+          contract: PREMALTA_CONTRACT,
+          balance: parseFloat(premaltaBalance.toFixed(4)),
+          chain: 'Base L2',
+          explorer: `https://basescan.org/address/${address}`,
+        }
+      },
+      links: {
+        basescan: `https://basescan.org/address/${address}`,
+        etherscan: `https://etherscan.io/address/${address}`,
+      },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500)
+  }
+})
+
+// GET /api/blockchain/premalta — $PREMALTA token info
+app.get('/api/blockchain/premalta', async (c) => {
+  const env = c.env as Record<string, string>
+  const alchemyKey = env.ALCHEMY_API_KEY || env.VITE_ALCHEMY_API_KEY || 'TOHei2xGaHxbHUneplEnx-biKQBtdOAq'
+  const PREMALTA_CONTRACT = '0xC0125651a46BDEea72a73A1C1A75b82e0E2C94c7'
+  const rpcUrl = `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`
+  try {
+    const supplyResp = await fetch(rpcUrl, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: PREMALTA_CONTRACT, data: '0x18160ddd' }, 'latest'], id: 1 })
+    })
+    const supplyData = await supplyResp.json() as { result?: string }
+    const totalSupply = supplyData.result && supplyData.result !== '0x' ? parseInt(supplyData.result, 16) / 1e18 : 0
+    return c.json({
+      success: true,
+      token: {
+        name: '$PREMALTA', symbol: 'PREMALTA',
+        contract: PREMALTA_CONTRACT,
+        chain: 'Base (Coinbase L2)', chain_id: 8453,
+        total_supply: parseFloat(totalSupply.toFixed(2)),
+        liquidity_usd: 0, price_usd: null,
+        status: 'DEPLOYED — NEEDS LIQUIDITY',
+        next_step: 'Add $300 USDC liquidity on Uniswap V3 Base',
+        uniswap_url: `https://app.uniswap.org/#/add/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/${PREMALTA_CONTRACT}/3000?chain=base`,
+        basescan: `https://basescan.org/address/${PREMALTA_CONTRACT}`,
+      },
+      funding_target: { usd: 500, idr: 8000000, purpose: 'Uniswap V3 Base liquidity pool' },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    return c.json({ success: false, error: String(err), token: { contract: PREMALTA_CONTRACT, chain: 'Base L2' } }, 500)
+  }
+})
+
 
 // ══════════════════════════════════════════════════════════════
 // SECTION FINAL: STATIC FILE SERVING + SPA FALLBACK

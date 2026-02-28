@@ -43,6 +43,7 @@ const SovereignLegacy = lazy(() => import('./components/SovereignLegacy'));
 const BDELanding = lazy(() => import('./components/BDELanding'));
 const SovereignLegacyLanding = lazy(() => import('./components/SovereignLegacyLanding'));
 const HOLYYBDLanding = lazy(() => import('./components/HOLYYBDLanding'));
+import MetaMaskModal, { WalletData } from './components/MetaMaskModal';
 
 // Loading fallback component
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
@@ -152,26 +153,37 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [userStats.stakedAmount]);
 
+  // Session #034: Real MetaMask Modal state
+  const [isMetaMaskModalOpen, setIsMetaMaskModalOpen] = useState(false);
+
   const handleConnectWallet = () => {
-    if (userStats.isWalletConnected) return;
-    const entropy = Math.random().toString(16).substring(2);
-    const fakeAddress = `0x${entropy.substring(0, 4)}...${entropy.substring(4, 8)}`;
-    const fullAddress = `0x742d35Cc6634C0532925a3b844Bc${entropy.substring(0, 6)}`;
+    if (userStats.isWalletConnected) {
+      // Already connected - show disconnect option
+      handleDisconnectWallet();
+      return;
+    }
+    // Open real MetaMask modal
+    setIsMetaMaskModalOpen(true);
+  };
+
+  const handleWalletConnected = (walletData: WalletData) => {
+    const networkName = walletData.network;
     setUserStats(prev => ({
       ...prev,
       isWalletConnected: true,
-      walletAddress: fullAddress,
-      governancePower: 120,
+      walletAddress: walletData.address,
+      governancePower: walletData.isVerified ? 120 : 50,
       web3Wallet: {
-        address: fullAddress,
-        network: 'Ethereum',
-        balance: 1.24,
-        nftCount: 3,
-        isVerified: true,
-        ensName: 'gani.hypha.eth'
+        address: walletData.address,
+        network: networkName,
+        balance: walletData.balanceEth,
+        nftCount: 0,
+        isVerified: walletData.isVerified,
+        ensName: undefined
       },
-      didDocument: `did:ethr:mainnet:${fullAddress}`
+      didDocument: `did:ethr:${walletData.networkId}:${walletData.address}`
     }));
+    setIsMetaMaskModalOpen(false);
     setIsGaniOpen(true);
   };
 
@@ -470,6 +482,13 @@ const App: React.FC = () => {
         <Suspense fallback={null}>
           <GaniAssistant isOpen={isGaniOpen} setIsOpen={setIsGaniOpen} />
         </Suspense>
+
+        {/* Session #034: Real MetaMask Modal */}
+        <MetaMaskModal
+          isOpen={isMetaMaskModalOpen}
+          onClose={() => setIsMetaMaskModalOpen(false)}
+          onConnect={handleWalletConnected}
+        />
       </div>
     </div>
   );
