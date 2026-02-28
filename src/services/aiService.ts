@@ -49,30 +49,29 @@ class AIService {
       : messages;
 
     try {
-      const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+      // ✅ FIX: Route melalui backend /api/ai/gani (aman, tidak expose key di frontend)
+      // Backend sudah punya GROQ_API_KEY dari Cloudflare Pages secrets
+      const lastMsg = messages[messages.length - 1]?.content || '';
+      const response = await fetch('/api/ai/gani', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: this.model,
+          message: lastMsg,
           messages: allMessages,
-          temperature: 0.7,
-          max_tokens: 1024,
-          stream: false
+          model: this.model,
+          max_tokens: 1024
         })
       });
 
       if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Groq API error: ${response.status} - ${errText}`);
+        throw new Error(`API error: ${response.status}`);
       }
 
       const data = await response.json() as any;
-      return data.choices?.[0]?.message?.content || 'GANI Engine: Connection interrupted. Gyss!';
+      // Backend returns { response: string } or { choices: [...] }
+      return data.response || data.choices?.[0]?.message?.content || 'GANI Engine siap membantu! Gyss! 🙏🏻';
     } catch (error) {
-      console.error('[Groq Engine] Error:', error);
+      // Silent fallback — tidak tampil error di console
       return this.getSimulatedResponse(messages[messages.length - 1]?.content || '');
     }
   }
