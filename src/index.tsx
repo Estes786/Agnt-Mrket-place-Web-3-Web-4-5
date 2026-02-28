@@ -2835,6 +2835,11 @@ const SUBSCRIPTION_PLANS: Record<string, { name: string; amount: number; agent: 
   'sl-guardian': { name: 'SL Family Guardian', amount: 199000, agent: 'SCA', description: '100 dokumen, Web5 DWN, Family Treasury, 3 wali dokumen, backup multi-lokasi' },
   'sl-dynasty': { name: 'SL Dynasty Legacy', amount: 499000, agent: 'SCA', description: 'Unlimited dokumen, Web5 DID, smart contract warisan, IoT home, $HYPHA staking' },
   'sl-sovereign': { name: 'SL Sovereign Family', amount: 1499000, agent: 'SCA', description: 'White-label extended family, custom contracts, institutional vault, governance rights' },
+  // SMA Plans (Sovereign Multi-Industry Agent — Meta Platform)
+  'sma-trial': { name: 'SMA Trial', amount: 0, agent: 'SMA', description: 'Coba SMA gratis 7 hari — akses semua agent dasar + 1 bundle custom' },
+  'sma-starter': { name: 'SMA Starter Bundle', amount: 499000, agent: 'SMA', description: 'Bundle 2 agent (pilih SCA+SICA atau SHGA+BDE), unified dashboard, cross-agent analytics' },
+  'sma-pro': { name: 'SMA Professional', amount: 999000, agent: 'SMA', description: 'Bundle semua agent + SovereignLegacy, Priority AI, unified analytics, API access, custom kombinasi' },
+  'sma-enterprise': { name: 'SMA Enterprise', amount: 2999000, agent: 'SMA', description: 'Full Sovereign Ecosystem, white-label, custom agent training, dedicated AM, SLA 24/7' },
 }
 
 // POST /api/payment/create — Buat transaksi pembayaran Duitku POP v2
@@ -2949,7 +2954,7 @@ app.post('/api/payment/create', async (c) => {
         countryCode: 'ID'
       }
     },
-    callbackUrl: 'https://gani-hypha-web3.pages.dev/api/payment/callback',
+    callbackUrl: env.DUITKU_CALLBACK_URL || 'https://gani-hypha-web3.pages.dev/api/payment/callback',
     returnUrl: `https://gani-hypha-web3.pages.dev/payment/success?order=${merchantOrderId}&plan=${plan_id}`,
     expiryPeriod: 1440 // 24 jam dalam menit
   }

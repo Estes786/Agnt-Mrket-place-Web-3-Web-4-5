@@ -43,6 +43,8 @@ const SovereignLegacy = lazy(() => import('./components/SovereignLegacy'));
 const BDELanding = lazy(() => import('./components/BDELanding'));
 const SovereignLegacyLanding = lazy(() => import('./components/SovereignLegacyLanding'));
 const HOLYYBDLanding = lazy(() => import('./components/HOLYYBDLanding'));
+const PaymentResultPage = lazy(() => import('./components/PaymentResultPage'));
+const SMALanding = lazy(() => import('./components/SMALanding'));
 import MetaMaskModal, { WalletData } from './components/MetaMaskModal';
 
 // Loading fallback component
@@ -67,6 +69,7 @@ const App: React.FC = () => {
     location.pathname === '/shga-landing' ||
     location.pathname === '/bde-landing' ||
     location.pathname === '/legacy-landing' ||
+    location.pathname === '/sma-landing' ||
     location.pathname === '/holyybd';
   
   // Jika ini public page, render tanpa app layout
@@ -81,18 +84,11 @@ const App: React.FC = () => {
           <Route path="/bde-landing" element={<BDELanding />} />
           <Route path="/legacy-landing" element={<SovereignLegacyLanding />} />
           <Route path="/holyybd" element={<HOLYYBDLanding />} />
-          <Route path="/payment/*" element={
-            <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white p-8">
-              <div className="text-center">
-                <div className="text-5xl mb-4">✅</div>
-                <h1 className="text-2xl font-bold mb-2">Pembayaran Diproses</h1>
-                <p className="text-gray-400 mb-6">Terima kasih! Cek email Anda untuk konfirmasi.</p>
-                <a href="/" className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-3 rounded-xl font-medium">
-                  Kembali ke Dashboard
-                </a>
-              </div>
-            </div>
-          } />
+          <Route path="/sma-landing" element={<SMALanding />} />
+          <Route path="/payment/success" element={<PaymentResultPage />} />
+          <Route path="/payment/failed" element={<PaymentResultPage />} />
+          <Route path="/payment/pending" element={<PaymentResultPage />} />
+          <Route path="/payment/*" element={<PaymentResultPage />} />
         </Routes>
       </Suspense>
     );
