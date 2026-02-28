@@ -407,7 +407,11 @@ const SovereignBarber: React.FC = () => {
       {/* Sovereign Ecosystem Navigator */}
       <SovereignNavBar
         currentAgent="bde"
-        onCtaClick={() => window.location.href = '/bde-landing#pricing'}
+        onCtaClick={() => {
+          // SPA navigation - tidak reload halaman
+          window.history.pushState(null, '', '/bde-landing');
+          window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+        }}
         ctaLabel="Upgrade Plan"
       />
       {notification && (

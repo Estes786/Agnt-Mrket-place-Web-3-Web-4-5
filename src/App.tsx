@@ -1,18 +1,19 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-
-// Helper: redirect ke home
-const RedirectToHome: React.FC = () => <Navigate to="/" replace />;
 import { BLUEPRINTS } from './constants';
 import { DeployedEcosystem, Blueprint, UserStats } from './types';
 
-// 🚀 EAGER LOAD: Components used immediately on first paint
-import Marketplace from './components/Marketplace';
-import Dashboard from './components/Dashboard';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import BottomNav from './components/BottomNav';
+// Helper: redirect ke home (harus setelah semua import)
+const RedirectToHome: React.FC = () => <Navigate to="/" replace />;
+
+// ✅ LAZY LOAD: Semua komponen besar dimuat on-demand untuk bundle kecil
+// Marketplace (1317 baris) dan Dashboard (621 baris) → lazy agar main chunk <200KB
+const Marketplace = lazy(() => import('./components/Marketplace'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Sidebar = lazy(() => import('./components/Sidebar'));
+const Header = lazy(() => import('./components/Header'));
+const BottomNav = lazy(() => import('./components/BottomNav'));
 
 // ⚡ LAZY LOAD: Heavy components loaded on demand
 const ArchitectMode = lazy(() => import('./components/ArchitectMode'));
@@ -48,7 +49,9 @@ const SovereignLegacyLanding = lazy(() => import('./components/SovereignLegacyLa
 const HOLYYBDLanding = lazy(() => import('./components/HOLYYBDLanding'));
 const PaymentResultPage = lazy(() => import('./components/PaymentResultPage'));
 const SMALanding = lazy(() => import('./components/SMALanding'));
-import MetaMaskModal, { WalletData } from './components/MetaMaskModal';
+const MetaMaskModal = lazy(() => import('./components/MetaMaskModal'));
+// WalletData type import only
+import type { WalletData } from './components/MetaMaskModal';
 
 // Loading fallback component
 const LoadingSpinner: React.FC<{ name?: string }> = ({ name }) => (
@@ -437,22 +440,26 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#020617] text-slate-200 overflow-hidden selection:bg-indigo-500/30">
-      <Sidebar
-        deployedCount={deployedEcosystems.length}
-        isOpen={isSidebarOpen}
-        setIsOpen={setIsSidebarOpen}
-      />
+      <Suspense fallback={<div className="w-16 bg-slate-900" />}>
+        <Sidebar
+          deployedCount={deployedEcosystems.length}
+          isOpen={isSidebarOpen}
+          setIsOpen={setIsSidebarOpen}
+        />
+      </Suspense>
 
       <div className="flex-1 flex flex-col h-screen relative overflow-hidden">
-        <Header
-          credits={userStats.hyphaBalance}
-          activePodsCount={deployedEcosystems.length}
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          isWalletConnected={userStats.isWalletConnected}
-          walletAddress={userStats.walletAddress}
-          onConnectWallet={handleConnectWallet}
-          reputationScore={userStats.reputationScore}
-        />
+        <Suspense fallback={<div className="h-14 bg-slate-900/80 border-b border-slate-800" />}>
+          <Header
+            credits={userStats.hyphaBalance}
+            activePodsCount={deployedEcosystems.length}
+            toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            isWalletConnected={userStats.isWalletConnected}
+            walletAddress={userStats.walletAddress}
+            onConnectWallet={handleConnectWallet}
+            reputationScore={userStats.reputationScore}
+          />
+        </Suspense>
 
         <main className="flex-1 overflow-y-auto scrollbar-hide pb-24 lg:pb-8 custom-scrollbar">
           <Suspense fallback={<LoadingSpinner name="page" />}>
@@ -535,17 +542,21 @@ const App: React.FC = () => {
           </Suspense>
         </main>
 
-        <BottomNav activePodsCount={deployedEcosystems.length} />
+        <Suspense fallback={null}>
+          <BottomNav activePodsCount={deployedEcosystems.length} />
+        </Suspense>
         <Suspense fallback={null}>
           <GaniAssistant isOpen={isGaniOpen} setIsOpen={setIsGaniOpen} />
         </Suspense>
 
         {/* Session #034: Real MetaMask Modal */}
-        <MetaMaskModal
-          isOpen={isMetaMaskModalOpen}
-          onClose={() => setIsMetaMaskModalOpen(false)}
-          onConnect={handleWalletConnected}
-        />
+        <Suspense fallback={null}>
+          <MetaMaskModal
+            isOpen={isMetaMaskModalOpen}
+            onClose={() => setIsMetaMaskModalOpen(false)}
+            onConnect={handleWalletConnected}
+          />
+        </Suspense>
       </div>
     </div>
   );

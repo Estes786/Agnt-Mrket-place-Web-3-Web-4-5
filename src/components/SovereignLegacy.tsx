@@ -342,7 +342,11 @@ const SovereignLegacy: React.FC = () => {
       {/* Sovereign Ecosystem Navigator */}
       <SovereignNavBar
         currentAgent="legacy"
-        onCtaClick={() => window.location.href = '/legacy-landing#pricing'}
+        onCtaClick={() => {
+          // SPA navigation - tidak reload halaman
+          window.history.pushState(null, '', '/legacy-landing');
+          window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+        }}
         ctaLabel="Upgrade Plan"
       />
       {notification && (

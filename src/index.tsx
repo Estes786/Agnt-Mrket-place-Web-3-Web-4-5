@@ -2822,6 +2822,7 @@ const SUBSCRIPTION_PLANS: Record<string, { name: string; amount: number; agent: 
   'sica-enterprise': { name: 'SICA Enterprise', amount: 999000, agent: 'SICA', description: 'Multi-cabang, WhatsApp bot, API GrabFood/GoFood, dashboard custom' },
   // SHGA Plans  
   'shga-trial': { name: 'SHGA Trial', amount: 0, agent: 'SHGA', description: 'Coba SHGA gratis 7 hari — katalog 5 produk + AI recommendation 3x/hari' },
+  'shga-starter': { name: 'SHGA Starter', amount: 199000, agent: 'SHGA', description: 'Paket starter: katalog 20 produk, AI recommendations 10x/hari, WA notif dasar' },
   'shga-lebaran': { name: 'SHGA Lebaran Edition', amount: 299000, agent: 'SHGA', description: 'Paket 3 bulan khusus Lebaran: unlimited produk + AI recommendations + WA notif' },
   'shga-pro': { name: 'SHGA Pro', amount: 499000, agent: 'SHGA', description: 'Sepanjang tahun: multi-event, custom packaging, analytics, API e-commerce' },
   'shga-enterprise': { name: 'SHGA Enterprise', amount: 1499000, agent: 'SHGA', description: 'White-label, B2B corporate gift, ERP integration, dedicated AM' },
@@ -2830,6 +2831,7 @@ const SUBSCRIPTION_PLANS: Record<string, { name: string; amount: number; agent: 
   'bde-starter': { name: 'BDE Starter Barber', amount: 149000, agent: 'SCA', description: '3 kursi barber, booking unlimited, AI Style Advisor, inventory tracker' },
   'bde-pro': { name: 'BDE Pro Dynasty', amount: 349000, agent: 'SCA', description: '10 kursi, multi-cabang, AI Vision, loyalty NFT, analytics advanced' },
   'bde-enterprise': { name: 'BDE Dynasty Empire', amount: 999000, agent: 'SCA', description: 'Unlimited kursi, white-label, Web3/Web5 stack, $HYPHA rewards' },
+  'bde-empire': { name: 'BDE Dynasty Empire', amount: 999000, agent: 'SCA', description: 'Unlimited kursi, white-label, Web3/Web5 stack, $HYPHA rewards' }, // alias
   // Sovereign Legacy Plans (Session #030)
   'sl-trial': { name: 'SL Family Starter', amount: 0, agent: 'SCA', description: 'Coba Sovereign Legacy gratis — 5 dokumen terenkripsi, AI advisor 3x/hari' },
   'sl-guardian': { name: 'SL Family Guardian', amount: 199000, agent: 'SCA', description: '100 dokumen, Web5 DWN, Family Treasury, 3 wali dokumen, backup multi-lokasi' },
