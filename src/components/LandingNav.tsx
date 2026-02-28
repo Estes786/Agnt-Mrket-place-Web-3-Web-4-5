@@ -1,9 +1,10 @@
 
 // ============================================================
-// LANDING NAV v2.1 — Shared Navbar & Footer untuk semua Landing Pages
+// LANDING NAV v3.0 — Shared Navbar & Footer untuk semua Landing Pages
 // GANI HYPHA Sovereign Ecosystem
-// Navigasi CEPAT antar semua Sovereign Agent Landing Pages
-// Fix: sovereign-barber, sovereign-legacy support + performance
+// FIX ROOT CAUSE: Ganti window.location.href → React Router Link
+// untuk SPA navigation tanpa full page reload
+// Performance: Instant navigation, no blank screen, no freeze
 // ============================================================
 
 import React from 'react';
@@ -43,11 +44,26 @@ const normalizeAgentId = (id: AgentId): string => {
   return id;
 };
 
-// Navigasi cepat — gunakan window.location untuk public pages (tidak perlu React Router)
-const goTo = (path: string) => {
-  if (typeof window !== 'undefined') {
-    window.location.href = path;
-  }
+// ✅ FIX: Gunakan React Router Link untuk SPA navigation
+// Ini eliminasi full page reload yang menyebabkan blank/freeze
+const NavLink: React.FC<{ to: string; className?: string; children: React.ReactNode; title?: string; onClick?: () => void }> = ({
+  to, className, children, title, onClick
+}) => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onClick) onClick();
+    // Gunakan pushState untuk SPA navigation tanpa reload
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', to);
+      // Dispatch popstate event agar React Router mendeteksi perubahan
+      window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+    }
+  };
+  return (
+    <a href={to} onClick={handleClick} className={className} title={title}>
+      {children}
+    </a>
+  );
 };
 
 // ──────────────────────────────────────────────────────────
@@ -67,25 +83,25 @@ export const SovereignNavBar: React.FC<LandingNavProps> = ({
 
         {/* Left: Platform logo + agent tabs */}
         <div className="flex items-center gap-2 min-w-0">
-          {/* Logo */}
-          <button
-            onClick={() => goTo('/')}
+          {/* Logo → back to home */}
+          <NavLink
+            to="/"
             className="shrink-0 flex items-center gap-1.5 mr-1"
             title="Kembali ke Homepage"
           >
             <span className="text-lg">🌿</span>
             <span className="text-[9px] font-black text-slate-400 hidden sm:block tracking-widest uppercase">GANI HYPHA</span>
-          </button>
+          </NavLink>
 
           {/* Separator */}
           <span className="text-slate-700 hidden sm:block">│</span>
 
-          {/* Agent Tabs */}
+          {/* Agent Tabs — instant SPA navigation */}
           <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
             {AGENTS.map(agent => (
-              <button
+              <NavLink
                 key={agent.id}
-                onClick={() => goTo(agent.path)}
+                to={agent.path}
                 className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all hover:scale-105 active:scale-95 ${
                   agent.id === normId
                     ? 'bg-white/10 text-white border border-white/20 shadow-sm'
@@ -97,19 +113,19 @@ export const SovereignNavBar: React.FC<LandingNavProps> = ({
                 {agent.id === normId && (
                   <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse ml-0.5"></span>
                 )}
-              </button>
+              </NavLink>
             ))}
           </div>
         </div>
 
         {/* Right: Store + CTA */}
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => goTo('/store')}
+          <NavLink
+            to="/store"
             className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg transition-all"
           >
             🛍️ <span>Store</span>
-          </button>
+          </NavLink>
           {onCtaClick && (
             <button
               onClick={onCtaClick}
@@ -147,38 +163,38 @@ export const SovereignFooter: React.FC<{
             </div>
             <div className="text-xs text-gray-400 mt-0.5">Bayar via Duitku QRIS / VA / E-Wallet. Aktif dalam menit!</div>
           </div>
-          <button
-            onClick={() => goTo('/store')}
-            className="shrink-0 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-violet-900/30"
+          <NavLink
+            to="/store"
+            className="shrink-0 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-violet-900/30 block"
           >
             Buka Store →
-          </button>
+          </NavLink>
         </div>
 
         {/* Agent Grid */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-8">
           {AGENTS.map(agent => (
-            <button
+            <NavLink
               key={agent.id}
-              onClick={() => goTo(agent.path)}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 ${
+              to={agent.path}
+              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 block text-center ${
                 agent.id === normId
                   ? 'border-white/20 bg-white/5 shadow-sm'
                   : 'border-gray-800/60 hover:border-gray-700 bg-gray-900/40 hover:bg-gray-800/40'
               }`}
             >
-              <span className="text-xl">{agent.icon}</span>
-              <span className={`text-[10px] font-bold ${agent.id === normId ? 'text-white' : 'text-gray-400'}`}>
+              <span className="text-xl block">{agent.icon}</span>
+              <span className={`text-[10px] font-bold block ${agent.id === normId ? 'text-white' : 'text-gray-400'}`}>
                 {agent.name}
               </span>
-              <span className="text-[8px] text-gray-600 text-center leading-tight">{agent.label}</span>
+              <span className="text-[8px] text-gray-600 text-center leading-tight block">{agent.label}</span>
               {agent.id === normId && (
-                <span className="text-[7px] text-green-400 font-black flex items-center gap-0.5">
+                <span className="text-[7px] text-green-400 font-black flex items-center gap-0.5 justify-center">
                   <span className="w-1 h-1 rounded-full bg-green-400 inline-block animate-pulse"></span>
                   Current
                 </span>
               )}
-            </button>
+            </NavLink>
           ))}
         </div>
 
@@ -188,17 +204,17 @@ export const SovereignFooter: React.FC<{
             <span>{agentIcon}</span>
             <span>
               {currentAgent.toString().toUpperCase().replace('-', ' ')} — Part of{' '}
-              <button onClick={() => goTo('/')} className={`${agentColor} transition-colors`}>GANI HYPHA</button>{' '}
+              <NavLink to="/" className={`${agentColor} transition-colors`}>GANI HYPHA</NavLink>{' '}
               Sovereign Ecosystem
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => goTo('/')} className="hover:text-white transition-colors flex items-center gap-1">
+            <NavLink to="/" className="hover:text-white transition-colors flex items-center gap-1">
               🏠 Home
-            </button>
-            <button onClick={() => goTo('/store')} className="hover:text-white transition-colors flex items-center gap-1">
+            </NavLink>
+            <NavLink to="/store" className="hover:text-white transition-colors flex items-center gap-1">
               🛍️ Store
-            </button>
+            </NavLink>
             <a
               href="https://wa.me/6285643383832"
               target="_blank"

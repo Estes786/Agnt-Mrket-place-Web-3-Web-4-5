@@ -78,19 +78,52 @@ const App: React.FC = () => {
     location.pathname === '/holyybd' ||
     location.pathname === '/sovereign-barber' ||
     location.pathname === '/sovereign-legacy' ||
-    location.pathname === '/i';
+    location.pathname === '/i' ||
+    // ✅ FIX: Store juga perlu bisa diakses sebagai public page standalone
+    // (user navigate dari landing page via NavLink → pushState)
+    location.pathname === '/store';
+
+  // ✅ FIX: Preload landing page chunks on idle untuk eliminasi blank screen
+  // Ini memastikan semua landing pages sudah di-cache saat user pertama kali navigate
+  React.useEffect(() => {
+    const preloadTimer = setTimeout(() => {
+      // Preload semua landing pages secara background
+      import('./components/BDELanding');
+      import('./components/SCALanding');
+      import('./components/SICALanding');
+      import('./components/SHGALanding');
+      import('./components/SovereignLegacyLanding');
+      import('./components/SMALanding');
+      import('./components/SovereignStore');
+    }, 1500); // Preload setelah 1.5s idle
+    return () => clearTimeout(preloadTimer);
+  }, []);
   
-  // Loading fallback yang lebih smooth - tidak blank, tidak lama
+  // ✅ ENHANCED: Loading fallback ultra-fast — muncul <100ms, tidak blank
   const PublicLoadingFallback = () => (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 text-white gap-4">
-      <div className="text-4xl animate-pulse">🌿</div>
-      <div className="text-lg font-bold text-white">GANI HYPHA</div>
-      <div className="flex gap-1.5">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white gap-3" style={{ animation: 'fadeIn 0.1s ease' }}>
+      <div
+        className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-xl"
+        style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', animation: 'pulse 1s ease-in-out infinite' }}
+      >
+        🌿
+      </div>
+      <div className="text-base font-black text-white tracking-wider">GANI HYPHA</div>
+      <div className="flex gap-1.5 mt-1">
         {[0,1,2].map(i => (
-          <div key={i} className="w-2 h-2 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+          <div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-violet-500"
+            style={{ animation: `bounce 0.8s ease-in-out ${i * 0.12}s infinite` }}
+          />
         ))}
       </div>
-      <p className="text-sm text-gray-500">Memuat halaman...</p>
+      <p className="text-xs text-slate-500 mt-1">Memuat halaman...</p>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.05) } }
+        @keyframes bounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
+      `}</style>
     </div>
   );
 
@@ -110,6 +143,7 @@ const App: React.FC = () => {
           <Route path="/sovereign-barber" element={<SovereignBarber />} />
           <Route path="/sovereign-legacy" element={<SovereignLegacy />} />
           <Route path="/i" element={<SCALanding />} />
+          <Route path="/store" element={<SovereignStore />} />
           <Route path="/payment/success" element={<PaymentResultPage />} />
           <Route path="/payment/failed" element={<PaymentResultPage />} />
           <Route path="/payment/pending" element={<PaymentResultPage />} />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SovereignNavBar } from './LandingNav';
 
 // ============================================================
 // SOVEREIGN STORE — GANI HYPHA Agent Marketplace
@@ -366,7 +367,11 @@ const SovereignStore: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="min-h-screen bg-gray-950">
+      {/* ✅ Standalone NavBar — untuk akses langsung dari landing pages */}
+      <SovereignNavBar currentAgent="sca" ctaLabel="🛍️ Semua Agent" />
+
+      <div className="p-4 md:p-6 space-y-6">
       {/* ── HEADER ── */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-violet-500/10 border border-violet-500/30 rounded-full text-violet-300 text-sm font-medium mb-2">
@@ -676,6 +681,7 @@ const SovereignStore: React.FC = () => {
           onClose={() => setPaymentModal(null)}
         />
       )}
+      </div>{/* end p-4 space-y-6 */}
     </div>
   );
 };
