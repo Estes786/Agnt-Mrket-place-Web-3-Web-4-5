@@ -652,6 +652,90 @@ const Marketplace: React.FC<MarketplaceProps> = ({
       )}
 
       {/* ============================================================ */}
+      {/* SOVEREIGN AGENT MARKETPLACE — Quick Access Landing Pages     */}
+      {/* ============================================================ */}
+      <div className="rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-950/30 via-slate-950 to-indigo-950/20 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/30 rounded-full text-[9px] font-black text-violet-400 uppercase tracking-widest mb-2">
+              <span>👑</span> SOVEREIGN AGENT MARKETPLACE
+            </div>
+            <h2 className="text-lg font-black text-white">Pilih Agent untuk Bisnis Anda</h2>
+            <p className="text-[10px] text-slate-500">Platform AI Agent siap pakai untuk bisnis Indonesia. Otomatisasi operasional, tingkatkan revenue.</p>
+          </div>
+          <button
+            onClick={() => navigate('/store')}
+            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold transition-all"
+          >
+            🛍️ Buka Store →
+          </button>
+        </div>
+
+        {/* Ramadan/Lebaran Banner */}
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🌙</span>
+            <div>
+              <div className="text-xs font-black text-amber-400">Ramadan &amp; Lebaran Special — H-32 LEBARAN!</div>
+              <div className="text-[9px] text-amber-300/70">Muslim peak order SHGA &amp; SICA! Deadline order hamper: <span className="font-bold">25 hari lagi.</span></div>
+            </div>
+          </div>
+          <button onClick={() => navigate('/shga-landing')} className="shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-[10px] font-bold transition-all">
+            Lihat SHGA →
+          </button>
+        </div>
+
+        {/* Agent Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { id: 'shga', icon: '🎁', name: 'SHGA', sub: 'AI untuk bisnis hamper & gift Lebaran', color: 'amber', landing: '/shga-landing', badge: '🔥 H-32!', status: 'live' },
+            { id: 'sica', icon: '🌙', name: 'SICA', sub: 'AI untuk katering Ramadan & event', color: 'indigo', landing: '/sica-landing', badge: '🌙 Ramadan!', status: 'live' },
+            { id: 'sca', icon: '⚖️', name: 'SCA', sub: 'AI analisis kontrak & dokumen legal', color: 'emerald', landing: '/sca-landing', badge: '⚡ AI-Powered', status: 'live' },
+            { id: 'sma', icon: '👑', name: 'SMA', sub: 'Meta-platform semua Sovereign Agents', color: 'violet', landing: '/sma-landing', badge: '🚀 NEW!', status: 'live' },
+            { id: 'sb', icon: '✂️', name: 'SB', sub: '"The Community Node" — AI Barbershop', color: 'yellow', landing: '/bde-landing', badge: '🆕 NEW', status: 'live' },
+            { id: 'sl', icon: '🏛️', name: 'SL', sub: '"The Family Sanctuary" — Digital Legacy', color: 'purple', landing: '/legacy-landing', badge: '🆕 NEW', status: 'live' },
+          ].map(agent => {
+            const colorMap: Record<string, string> = {
+              amber: 'border-amber-500/30 hover:border-amber-500/60 text-amber-400',
+              indigo: 'border-indigo-500/30 hover:border-indigo-500/60 text-indigo-400',
+              emerald: 'border-emerald-500/30 hover:border-emerald-500/60 text-emerald-400',
+              violet: 'border-violet-500/30 hover:border-violet-500/60 text-violet-400',
+              yellow: 'border-yellow-500/30 hover:border-yellow-500/60 text-yellow-400',
+              purple: 'border-purple-500/30 hover:border-purple-500/60 text-purple-400',
+            };
+            return (
+              <button
+                key={agent.id}
+                onClick={() => navigate(agent.landing)}
+                className={`relative p-3 rounded-2xl border bg-slate-900/80 transition-all hover:scale-[1.03] active:scale-95 text-left ${colorMap[agent.color]}`}
+              >
+                <div className="absolute -top-2 left-2">
+                  <span className="text-[8px] font-black bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded-full text-slate-300">{agent.badge}</span>
+                </div>
+                <div className="mt-2">
+                  <div className="text-2xl mb-1">{agent.icon}</div>
+                  <div className="text-xs font-black text-white">{agent.name}</div>
+                  <div className="text-[8px] text-slate-500 mt-0.5 line-clamp-2">{agent.sub}</div>
+                  <div className="mt-2 text-[8px] font-bold text-emerald-400 flex items-center gap-1">
+                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div> Live
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => navigate('/store')} className="flex-1 sm:flex-none py-2.5 px-5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold transition-all">
+            🛍️ Buka Sovereign Store → Checkout via Duitku
+          </button>
+          <button onClick={() => navigate('/sma-landing')} className="flex-1 sm:flex-none py-2.5 px-5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-slate-700 transition-all">
+            👑 Lihat SMA Bundle (Hemat 60%)
+          </button>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
       {/* MAIN MARKETPLACE CONTENT                                     */}
       {/* ============================================================ */}
 

@@ -65,6 +65,7 @@ const App: React.FC = () => {
   // Public routes yang tidak butuh app layout (sidebar, header, dll)
   const isPublicPage = location.pathname.startsWith('/payment') || 
     location.pathname === '/sca-landing' ||
+    location.pathname === '/sca' ||
     location.pathname === '/sica-landing' ||
     location.pathname === '/shga-landing' ||
     location.pathname === '/bde-landing' ||
@@ -89,6 +90,8 @@ const App: React.FC = () => {
           <Route path="/payment/failed" element={<PaymentResultPage />} />
           <Route path="/payment/pending" element={<PaymentResultPage />} />
           <Route path="/payment/*" element={<PaymentResultPage />} />
+          {/* Fallback: redirect ke home jika tidak cocok */}
+          <Route path="*" element={<SCALanding />} />
         </Routes>
       </Suspense>
     );
